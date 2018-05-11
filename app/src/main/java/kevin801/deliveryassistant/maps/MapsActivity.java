@@ -34,15 +34,11 @@ import com.google.android.gms.tasks.Task;
 
 import kevin801.deliveryassistant.R;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
-{
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
     
     private GoogleMap mMap;
     private int LOCATION_PERMISSION_REQUEST = 1;
-    private Location location;
-    private LocationListener mLocationClient;
     private FusedLocationProviderClient mFusedLocationProviderClient;
-    private boolean mLocationPermissionGranted = false;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,9 +48,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-    
-        askFineLocationPermission();
-    
+        
         mFusedLocationProviderClient = LocationServices
                 .getFusedLocationProviderClient(this);
     }
@@ -67,47 +61,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             // permission is granted
             mMap.setMyLocationEnabled(true);
-            mLocationPermissionGranted = true;
             getDeviceLocation(mMap);
-        }
-    }
-    
-    private void askFineLocationPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // permission not granted
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
-                // show explanation
-                Toast.makeText(this, "Location is required for navigation.", Toast.LENGTH_LONG);
-            } else {
-                // Location permission has not been granted yet, request it.
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST);
-            }
         }
     }
     
     private void getDeviceLocation(GoogleMap googleMap) {
         mMap = googleMap;
         try {
-            if (mLocationPermissionGranted) {
-                Task<Location> locationResult = mFusedLocationProviderClient.getLastLocation();
-                locationResult.addOnCompleteListener(new OnCompleteListener<Location>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Location> task) {
-                        if (task.isSuccessful()) {
-                            // Set the map's camera position to the current location of the device.
-                            Location location = task.getResult();
-                            LatLng currentLatLng = new LatLng(location.getLatitude(),
-                                    location.getLongitude());
-                            CameraUpdate update = CameraUpdateFactory.newLatLngZoom(currentLatLng, 17.0F);
-                            mMap.moveCamera(update);
-                        }
+            Task<Location> locationResult = mFusedLocationProviderClient.getLastLocation();
+            locationResult.addOnCompleteListener(new OnCompleteListener<Location>() {
+                @Override
+                public void onComplete(@NonNull Task<Location> task) {
+                    if (task.isSuccessful()) {
+                        // Set the map's camera position to the current location of the device.
+                        Location location = task.getResult();
+                        LatLng currentLatLng = new LatLng(location.getLatitude(),
+                                location.getLongitude());
+                        CameraUpdate update = CameraUpdateFactory.newLatLngZoom(currentLatLng, 17.0F);
+                        mMap.moveCamera(update);
                     }
-                });
-            }
+                }
+            });
         } catch (SecurityException e) {
             Log.e("Exception: %s", e.getMessage());
         }
     }
-    
-    
 }
