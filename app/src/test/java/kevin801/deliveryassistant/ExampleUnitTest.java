@@ -1,4 +1,4 @@
-package kevin801.deliveryhelper;
+package kevin801.deliveryassistant;
 
 import org.junit.Test;
 

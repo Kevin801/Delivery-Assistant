@@ -1,8 +1,8 @@
 <resources>
-    <string name="app_name">Delivery Helper</string>
+    <string name="app_name">Delivery Assistant</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
-    <string name="nav_header_title">Delivery Helper</string>
+    <string name="nav_header_title">Delivery Assistant</string>
     <string name="nav_header_desc">Navigation header</string>
     <string name="action_settings">Settings</string>
 </resources>

@@ -1,4 +1,4 @@
-package kevin801.deliveryhelper;
+package kevin801.deliveryassistant;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;
