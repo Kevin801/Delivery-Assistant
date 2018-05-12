@@ -6,4 +6,7 @@
     <string name="nav_header_desc">Navigation header</string>
     <string name="action_settings">Settings</string>
     <string name="title_activity_maps">Map</string>
+    <string name="delete_button">Delete</string>
+    <string name="calculate_button">Calculate</string>
+
 </resources>
