@@ -1,13 +1,19 @@
 package kevin801.deliveryassistant.maps;
 
 import android.Manifest;
+import android.app.FragmentManager;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.support.annotation.NonNull;
+import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -20,29 +26,31 @@ import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PointOfInterest;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 import kevin801.deliveryassistant.R;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, DeliveriesListAdapter.OnItemClicked {
     
     private static final String TAG = MapsActivity.class.getSimpleName();
     private GoogleMap mMap;
     private FusedLocationProviderClient mFusedLocationProviderClient;
-    private Marker marker;
-    private ListView deliveriesListView;
-    private DeliveriesListAdapter adapter;
-    private ArrayList<Delivery> addressList = new ArrayList<>();
-    
-    private String DELIVERIES_LIST = "deliveries";
+    private RecyclerView mRecyclerListView;
+    private DeliveriesListAdapter mAdapter;
+    private RecyclerView.LayoutManager mLayoutManager;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,28 +61,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
         
-        
-        
-        
         mFusedLocationProviderClient = LocationServices
                 .getFusedLocationProviderClient(this);
         
-        setUpAutoComplete();
         setUpListView();
-        
+        setUpAutoComplete();
     }
     
     private void setUpListView() {
-        deliveriesListView = findViewById(R.id.deliveries_listview);
-
-        adapter = new DeliveriesListAdapter(addressList, this);
+        mRecyclerListView = (RecyclerView) findViewById(R.id.deliveries_listview);
         
+        mLayoutManager = new LinearLayoutManager(this);
+        mRecyclerListView.setLayoutManager(mLayoutManager);
         
-//        adapter = new ArrayAdapter<String>(this,
-//                android.R.layout.simple_list_item_1,
-//                addressList);
-    
-        deliveriesListView.setAdapter(adapter);
+        mAdapter = new DeliveriesListAdapter();
+        mRecyclerListView.setAdapter(mAdapter);
+        
+        mAdapter.setOnClick(this);
     }
     
     private void setUpAutoComplete() {
@@ -84,20 +87,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
             @Override
             public void onPlaceSelected(Place place) {
+                
                 final LatLng latLngLoc = place.getLatLng();
-                MarkerOptions inputMarker = new MarkerOptions().position(latLngLoc).title(place.getAddress().toString());
+                MarkerOptions inputMarker = new MarkerOptions().position(latLngLoc).title(Objects.requireNonNull(place.getAddress()).toString());
                 
                 Delivery delivery = new Delivery(place);
-    
-                if (!addressList.contains(delivery)) {
-                    // not contained in list
-                    marker = mMap.addMarker(inputMarker);
-                    addAddressToList(delivery);
-                    gotoAddressLocation(mMap, place);
-                }
+                ArrayList<Delivery> dupList = (ArrayList<Delivery>) mAdapter.getData();
                 
+                boolean noDuplicates = true;
+                for (int i = 0; i <= dupList.size() - 1; i++) {
+                    if (dupList.isEmpty()) {
+                        break;
+                    } else if (dupList.get(i).getLatLng().equals(delivery.getLatLng())) {
+                        noDuplicates = false;
+                        Toast.makeText(MapsActivity.this,"The Address is alread on the List", Toast.LENGTH_LONG).show();
+                        break;
+                    }
+                }
+    
+                if (noDuplicates) {
+                    // not contained in list
+                    mMap.addMarker(inputMarker);
+                    addDeliveryToList(delivery);
+                }
+                gotoPlaceLocation(place);
+    
                 Log.i(TAG, "Place: " + place.getName());
             }
+            
             @Override
             public void onError(Status status) {
                 Toast.makeText(MapsActivity.this, "Place not found." + status.toString(), Toast.LENGTH_LONG).show();
@@ -107,25 +124,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
     
     /**
-     * Moves the camera to the location of the newly added marker.
-     * @param mMap The google map with the marker and address.
-     * @param place The place Object with the information containing the Latitude and Longitude.
-     */
-    public void gotoAddressLocation(GoogleMap mMap, Place place) {
-        LatLng latLng = place.getLatLng();
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
-    }
-    
-    /**
-     * Used to add marker's name (addresses) to a list view.
+     * Used to add Delivery to a list view.
      *
      * @param delivery The Delivery containing the address to be added to the view to add the marker.
      */
-    private void addAddressToList(Delivery delivery) {
-        addressList.add(delivery);
-        adapter.notifyDataSetChanged();
+    private void addDeliveryToList(Delivery delivery) {
+        mAdapter.addData(delivery);
     }
-    
     
     @Override
     public void onMapReady(GoogleMap googleMap) {
@@ -135,16 +140,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             // permission is granted
             mMap.setMyLocationEnabled(true);
             mMap.setTrafficEnabled(true);
-            gotoDeviceLocation(mMap);
+            gotoDeviceLocation();
         }
     }
     
     /**
      * Moves the camera to the device's location.
-     * @param googleMap The currently viewed map.
      */
-    public void gotoDeviceLocation(GoogleMap googleMap) {
-        mMap = googleMap;
+    public void gotoDeviceLocation() {
         try {
             Task<Location> locationResult = mFusedLocationProviderClient.getLastLocation();
             locationResult.addOnCompleteListener(new OnCompleteListener<Location>() {
@@ -165,18 +168,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
     
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
+    /**
+     * Moves the camera to the location of the newly added marker.
+     *
+     * @param place The place Object with the information containing the Latitude and Longitude.
+     */
+    public void gotoPlaceLocation(Place place) {
+        LatLng latLng = place.getLatLng();
+        mMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
     }
     
     @Override
-    protected void onRestoreInstanceState(Bundle savedInstanceState) {
-        super.onRestoreInstanceState(savedInstanceState);
+    public void onItemClick(View view, int position) {
+        List<Delivery> list = mAdapter.getData();
+        
+        Delivery delivery = (Delivery) list.get(position);
+        gotoPlaceLocation(delivery.getPlace());
     }
-    
-
-
 }
 
 
