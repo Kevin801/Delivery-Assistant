@@ -1,0 +1,45 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <TextView
+        android:id="@+id/address_row_item"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_centerVertical="true"
+        android:text="Address                                                                 "
+        android:maxWidth="290dp"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:textColor="@android:color/black" />
+
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_alignParentRight="true">
+
+        <TextView
+            android:id="@+id/time_row_item"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Time:  5         "
+            android:maxLines="1"
+            android:maxWidth="75dp"
+            android:textColor="@android:color/black" />
+
+        <TextView
+            android:id="@+id/distance_row_item"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Dist:  5       "
+            android:maxLines="1"
+            android:maxWidth="75dp"
+            android:textColor="@android:color/black" />
+
+    </LinearLayout>
+
+</RelativeLayout>
