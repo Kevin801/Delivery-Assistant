@@ -8,5 +8,9 @@
     <string name="title_activity_maps">Map</string>
     <string name="delete_button">Delete</string>
     <string name="calculate_button">Calculate</string>
+    <string name="delevery_dist_list">Dist:</string>
+    <string name="delevery_time_list">Time:</string>
+
+
 
 </resources>

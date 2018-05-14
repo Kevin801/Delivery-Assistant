@@ -1,11 +1,9 @@
 package kevin801.deliveryassistant.maps;
 
 import android.Manifest;
-import android.app.FragmentManager;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.support.annotation.NonNull;
-import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
@@ -13,8 +11,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ListView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.api.Status;
@@ -26,31 +22,28 @@ import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.PointOfInterest;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 import kevin801.deliveryassistant.R;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, DeliveriesListAdapter.OnItemClicked {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, OnItemClicked {
     
     private static final String TAG = MapsActivity.class.getSimpleName();
     private GoogleMap mMap;
     private FusedLocationProviderClient mFusedLocationProviderClient;
-    private RecyclerView mRecyclerListView;
     private DeliveriesListAdapter mAdapter;
     private RecyclerView.LayoutManager mLayoutManager;
+    private ArrayList<Marker> markers;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,17 +57,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mFusedLocationProviderClient = LocationServices
                 .getFusedLocationProviderClient(this);
         
+        markers = new ArrayList<>();
+        
         setUpListView();
         setUpAutoComplete();
     }
     
     private void setUpListView() {
-        mRecyclerListView = (RecyclerView) findViewById(R.id.deliveries_listview);
+        RecyclerView mRecyclerListView = (RecyclerView) findViewById(R.id.deliveries_listview);
         
         mLayoutManager = new LinearLayoutManager(this);
         mRecyclerListView.setLayoutManager(mLayoutManager);
         
-        mAdapter = new DeliveriesListAdapter();
+        mAdapter = new DeliveriesListAdapter(this, new ArrayList<Delivery>());
         mRecyclerListView.setAdapter(mAdapter);
         
         mAdapter.setOnClick(this);
@@ -89,7 +84,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onPlaceSelected(Place place) {
                 
                 final LatLng latLngLoc = place.getLatLng();
-                MarkerOptions inputMarker = new MarkerOptions().position(latLngLoc).title(Objects.requireNonNull(place.getAddress()).toString());
+                MarkerOptions inputMarker = new MarkerOptions()
+                        .position(latLngLoc)
+                        .title(Objects.requireNonNull(place.getAddress()).toString());
                 
                 Delivery delivery = new Delivery(place);
                 ArrayList<Delivery> dupList = (ArrayList<Delivery>) mAdapter.getData();
@@ -107,7 +104,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     
                 if (noDuplicates) {
                     // not contained in list
-                    mMap.addMarker(inputMarker);
+                    Marker marker = mMap.addMarker(inputMarker);
+                    
+                    markers.add(marker);
+                    marker.showInfoWindow();
+    
                     addDeliveryToList(delivery);
                 }
                 gotoPlaceLocation(place);
@@ -184,6 +185,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         
         Delivery delivery = (Delivery) list.get(position);
         gotoPlaceLocation(delivery.getPlace());
+        
+        for (Marker ele : markers) {
+            if (ele.getPosition().equals(delivery.getLatLng())) {
+                ele.showInfoWindow();
+                break;
+            }
+        }
     }
 }
 

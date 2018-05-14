@@ -9,8 +9,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
-        android:layout_centerVertical="true"
-        android:text="Address                                                                 "
+        android:text="Address"
         android:maxWidth="290dp"
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:textColor="@android:color/black" />
@@ -27,7 +26,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Time:  5         "
-            android:maxLines="1"
+            android:maxLines="2"
             android:maxWidth="75dp"
             android:textColor="@android:color/black" />
 
@@ -36,7 +35,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Dist:  5       "
-            android:maxLines="1"
+            android:maxLines="2"
             android:maxWidth="75dp"
             android:textColor="@android:color/black" />
 
