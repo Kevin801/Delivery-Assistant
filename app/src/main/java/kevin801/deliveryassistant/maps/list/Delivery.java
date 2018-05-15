@@ -6,7 +6,7 @@ import com.google.android.gms.maps.model.LatLng;
 public class Delivery {
     
     private String address;
-    private double distance, time, tip, milage;
+    private double distance, time, tip;
     private LatLng latLng;
     private Place place;
     
@@ -15,7 +15,6 @@ public class Delivery {
         distance = -1; // change to get delivery distance and time via google map's search.
         time = -1;
         tip = 0;
-        milage = 0;
         latLng = place.getLatLng();
         this.place = place;
     }
@@ -46,13 +45,5 @@ public class Delivery {
     
     public void setTip(double tip) {
         this.tip = tip;
-    }
-    
-    public double getMilage() {
-        return milage;
-    }
-    
-    public void setMilage(double milage) {
-        this.milage = milage;
     }
 }
