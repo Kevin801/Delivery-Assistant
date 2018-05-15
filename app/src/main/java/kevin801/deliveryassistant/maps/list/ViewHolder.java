@@ -1,4 +1,4 @@
-package kevin801.deliveryassistant.maps;
+package kevin801.deliveryassistant.maps.list;
 
 
 import android.support.v7.widget.RecyclerView;

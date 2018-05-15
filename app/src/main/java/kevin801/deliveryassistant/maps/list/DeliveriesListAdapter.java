@@ -1,16 +1,17 @@
-package kevin801.deliveryassistant.maps;
+package kevin801.deliveryassistant.maps.list;
 
 
 import android.content.Context;
-import android.content.res.Resources;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
+
+import com.google.android.gms.maps.model.Marker;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import kevin801.deliveryassistant.R;
 
@@ -20,12 +21,21 @@ public class DeliveriesListAdapter extends RecyclerView.Adapter<ViewHolder> {
     private OnItemClicked mListener;
     private Context mContext;
     
+    /**
+     * Constructs the Context and Data set.
+     * @param context The context where it's being used.
+     * @param dataSet The data being used.
+     */
     public DeliveriesListAdapter(Context context, List<Delivery> dataSet) {
         this.mContext = context;
         deliveryList = dataSet;
     }
     
-    public void addData(Delivery delivery) {
+    /**
+     * Adds a Delivery to the list.
+     * @param delivery the Delivery to be added.
+     */
+    public void addDelivery(Delivery delivery) {
     
         deliveryList.add(delivery);
     
@@ -39,8 +49,49 @@ public class DeliveriesListAdapter extends RecyclerView.Adapter<ViewHolder> {
         notifyDataSetChanged();
     }
     
-    public List<Delivery> getData() {
+    /**
+     * Gets the List of Deliveries.
+     * @return List of Deliveries.
+     */
+    public List<Delivery> getDeliveryList() {
         return deliveryList;
+    }
+    
+    /**
+     * Removes the Delivery from the list.
+     * @param delivery the Delivery designated inside the list.
+     */
+    public void removeDelivery(Delivery delivery) {
+    
+        if (!deliveryList.remove(delivery)) {
+            // delivery not found
+            throw new NoSuchElementException();
+        }
+    
+        // remove reference by copying to new array
+        ArrayList<Delivery> copy = new ArrayList<>();
+        for (Delivery s : deliveryList) {
+            copy.add(s);
+        }
+        
+        // refreshing delivery list
+        deliveryList.clear();
+        deliveryList.addAll(copy);
+        notifyDataSetChanged();
+    }
+    
+    /**
+     * Finds the Delivery associated with the given marker.
+     * @param marker The Delivery with the designated marker.
+     * @return A Delivery where the marker is located. Null if not found.
+     */
+    public Delivery findDeliveryByMarker(Marker marker) {
+        for (Delivery ele : deliveryList) {
+            if (marker.getPosition().equals(ele.getLatLng())){
+                return ele;
+            }
+        }
+        return null;
     }
     
     // Create new views (invoked by the layout manager)

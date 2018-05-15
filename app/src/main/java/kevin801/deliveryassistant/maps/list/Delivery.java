@@ -1,4 +1,4 @@
-package kevin801.deliveryassistant.maps;
+package kevin801.deliveryassistant.maps.list;
 
 import com.google.android.gms.location.places.Place;
 import com.google.android.gms.maps.model.LatLng;
@@ -6,7 +6,7 @@ import com.google.android.gms.maps.model.LatLng;
 public class Delivery {
     
     private String address;
-    private double distance, time;
+    private double distance, time, tip, milage;
     private LatLng latLng;
     private Place place;
     
@@ -14,6 +14,8 @@ public class Delivery {
         address = place.getAddress().toString();
         distance = -1; // change to get delivery distance and time via google map's search.
         time = -1;
+        tip = 0;
+        milage = 0;
         latLng = place.getLatLng();
         this.place = place;
     }
@@ -38,4 +40,19 @@ public class Delivery {
         return latLng;
     }
     
+    public double getTip() {
+        return tip;
+    }
+    
+    public void setTip(double tip) {
+        this.tip = tip;
+    }
+    
+    public double getMilage() {
+        return milage;
+    }
+    
+    public void setMilage(double milage) {
+        this.milage = milage;
+    }
 }
