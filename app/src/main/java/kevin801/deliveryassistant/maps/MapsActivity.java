@@ -175,6 +175,7 @@ public class MapsActivity extends FragmentActivity implements
             googleMap.setOnMarkerClickListener(this);
             mMap.setMyLocationEnabled(true);
             mMap.getUiSettings().setZoomControlsEnabled(true);
+            mMap.getUiSettings().setMapToolbarEnabled(false);
 //            mMap.setTrafficEnabled(true);     TODO: add toolbar button to enable/disable traffic.
             gotoDeviceLocation();
             
@@ -269,11 +270,14 @@ public class MapsActivity extends FragmentActivity implements
     
     @Override
     public boolean onMarkerClick(Marker marker) {
-        this.selectedMarker = marker;
-        selectedMarker.showInfoWindow();
-        mMap.animateCamera(CameraUpdateFactory.newLatLng(marker.getPosition()));
+        if (!marker.equals(workMarker)) {
+            this.selectedMarker = marker;
+            selectedMarker.showInfoWindow();
+            mMap.animateCamera(CameraUpdateFactory.newLatLng(marker.getPosition()));
+            return true;
+        }
         Log.i(TAG, "onMarkerClick: " + marker.toString());
-        return true;
+        return false;
     }
     
     /**
