@@ -17,6 +17,7 @@ import android.view.MenuItem;
 import android.widget.Toast;
 
 import kevin801.deliveryassistant.maps.MapsActivity;
+import kevin801.deliveryassistant.settings.SettingsActivity;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
@@ -53,9 +54,7 @@ public class MainActivity extends AppCompatActivity
             super.onBackPressed();
         }
     }
-    
 
-    @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
         // Handle navigation view item clicks here.
@@ -65,11 +64,12 @@ public class MainActivity extends AppCompatActivity
             Intent intent = new Intent(this, MapsActivity.class);
             startActivity(intent);
         } else if (id == R.id.nav_record_earnings) {
-
-        } else if (id == R.id.nav_previous_records) {
-
-        } else if (id == R.id.nav_settings) {
         
+        } else if (id == R.id.nav_previous_records) {
+        
+        } else if (id == R.id.nav_settings) {
+            Intent intent = new Intent(this, SettingsActivity.class);
+            startActivity(intent);
         }
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);

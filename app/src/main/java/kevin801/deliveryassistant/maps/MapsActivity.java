@@ -74,12 +74,12 @@ public class MapsActivity extends FragmentActivity implements
     private DeliveriesListAdapter mAdapter;
     private RecyclerView.LayoutManager mLayoutManager;
     
-    private ArrayList<Marker> markers;
+    private ArrayList<Marker> markerList;
     private Marker selectedMarker;
     /**
      * The marker where the user's work is located
      */
-    private Marker mainMarker;
+    private Marker workMarker;
     private Polyline currentPolyline;
     private LatLng workLatLng = null;
     private LatLng currLatLng;
@@ -96,8 +96,8 @@ public class MapsActivity extends FragmentActivity implements
         
         mFusedLocationProviderClient = LocationServices
                 .getFusedLocationProviderClient(this);
-        
-        markers = new ArrayList<>();
+    
+        markerList = new ArrayList<>();
         mContext = this;
         setUpListView();
         setUpAutoComplete();
@@ -133,11 +133,11 @@ public class MapsActivity extends FragmentActivity implements
                 ArrayList<Delivery> dupList = (ArrayList<Delivery>) mAdapter.getDeliveryList();
                 
                 boolean noDuplicates = true;
-                for (int i = 0; i <= dupList.size() - 1; i++) {
+                for (Delivery ele: dupList) {
                     if (dupList.isEmpty()) {
-                        // adding to empty list.
+                        // adding to empty list, noDuplicates = true
                         break;
-                    } else if (dupList.get(i).getLatLng().equals(delivery.getLatLng())) {
+                    } else if (ele.getLatLng().equals(delivery.getLatLng())) {
                         // delivery is already in the list.
                         noDuplicates = false;
                         Toast.makeText(MapsActivity.this, "The Address is already on the List", Toast.LENGTH_LONG).show();
@@ -148,8 +148,8 @@ public class MapsActivity extends FragmentActivity implements
                 if (noDuplicates) {
                     // not contained in list
                     Marker marker = mMap.addMarker(inputMarker);
-                    
-                    markers.add(marker);
+    
+                    markerList.add(marker);
                     marker.showInfoWindow();
                     selectedMarker = marker;
                     mAdapter.addDelivery(delivery);
@@ -181,16 +181,13 @@ public class MapsActivity extends FragmentActivity implements
             // initializing selectedMarker with a marker with no title.
             Marker marker = mMap.addMarker(new MarkerOptions().position(new LatLng(999999, 9999999)));
             selectedMarker = marker;
-            marker.remove();
+            selectedMarker.remove();
             
             // initializing currentPolyline with a line with no title.
             Polyline polyline = mMap.addPolyline(new PolylineOptions().add(new LatLng(999999, 99999999)));
             currentPolyline = polyline;
-            polyline.setVisible(false);
-    
-
+            polyline.remove();
 //            mainMarker.setVisible(false);
-            
         }
     }
     
@@ -215,10 +212,10 @@ public class MapsActivity extends FragmentActivity implements
                         if (workLatLng == null) { // default to user location.
                             workLatLng = currLatLng;
                         }
-                        mainMarker = mMap.addMarker(new MarkerOptions()
+                        workMarker = mMap.addMarker(new MarkerOptions()
                                 .title("Work").position(workLatLng)
                                 .icon(bitmapDescriptorFromVector(mContext, R.drawable.ic_work_black_24dp)));
-                        markers.add(mainMarker);
+                        markerList.add(workMarker);
 
                     }
                 }
@@ -257,9 +254,9 @@ public class MapsActivity extends FragmentActivity implements
         Delivery delivery = (Delivery) list.get(position);
         gotoPlaceLocation(delivery.getPlace());
         
-        for (Marker ele : markers) {
+        for (Marker ele : markerList) {
             if (ele.getPosition().equals(delivery.getLatLng())) {
-                // delivery is found.
+                // delivery found
                 ele.showInfoWindow();
                 selectedMarker = ele;
                 break;
@@ -269,10 +266,7 @@ public class MapsActivity extends FragmentActivity implements
     
     @Override
     public boolean onMarkerClick(Marker marker) {
-        Marker copy = mMap.addMarker(new MarkerOptions().title(""));
-        copy = marker;
-        this.selectedMarker = copy;
-        copy.remove();
+        this.selectedMarker = marker;
         
         return true;
     }
@@ -284,7 +278,7 @@ public class MapsActivity extends FragmentActivity implements
      * @param view The View.
      */
     public void deleteMarkerButton(View view) {
-        if (selectedMarker != mainMarker && selectedMarker.isInfoWindowShown()) {
+        if (selectedMarker != workMarker && selectedMarker.isInfoWindowShown()) {
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle(R.string.delete_warning_title);
             builder.setMessage(R.string.delete_warning_message);
@@ -293,8 +287,10 @@ public class MapsActivity extends FragmentActivity implements
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     if (selectedMarker.isInfoWindowShown()) {
-                        markers.remove(selectedMarker); // remove from markers List
+                        markerList.remove(selectedMarker); // remove from markers List
                         selectedMarker.remove(); // remove from map
+                        currentPolyline.remove();
+    
                         mAdapter.removeDelivery(mAdapter.findDeliveryByMarker(selectedMarker));
                     }
                 }
@@ -316,16 +312,16 @@ public class MapsActivity extends FragmentActivity implements
         
         currentPolyline.remove();
         // Checks, whether start and end locations are captured
-        if (markers.size() >= 1) {
+        if (markerList.size() >= 1) {
             List<LatLng> waypointList = new ArrayList<>();
             
-            for (int i = 0; i < markers.size(); i++) {
-                waypointList.add(markers.get(i).getPosition());
+            for (int i = 0; i < markerList.size(); i++) {
+                waypointList.add(markerList.get(i).getPosition());
             }
             
             // Getting URL to the Google Directions API
 //            String url = getDirectionsUrl(origin, waypointList);
-            String url = getDirectionsUrlWithWaypoints(mainMarker.getPosition(), waypointList);
+            String url = getDirectionsUrlWithWaypoints(workMarker.getPosition(), waypointList);
             
             DownloadTask downloadTask = new DownloadTask();
             
@@ -417,37 +413,6 @@ public class MapsActivity extends FragmentActivity implements
             // Drawing polyline in the Google Map for the i-th route
             currentPolyline = mMap.addPolyline(lineOptions);
         }
-    }
-    
-    /**
-     * Creates URI with only destination and origin/
-     * @param origin
-     * @param dest
-     * @return
-     */
-    @Deprecated
-    private String getDirectionsUrl(LatLng origin, LatLng dest) {
-
-        // Origin of route
-        String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
-
-        // Destination of route
-        String str_dest = "destination=" + dest.latitude + "," + dest.longitude;
-
-        // Sensor enabled
-        String sensor = "sensor=false";
-        String mode = "mode=driving";
-
-        // Building the parameters to the web service
-        String parameters = str_origin + "&" + str_dest + "&" + sensor + "&" + mode;
-
-        // Output format
-        String output = "json";
-
-        // Building the url to the web service
-        String url = "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters;
-
-        return url;
     }
     
     /**
