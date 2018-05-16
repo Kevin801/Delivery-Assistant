@@ -37,6 +37,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -134,10 +135,7 @@ public class MapsActivity extends FragmentActivity implements
                 
                 boolean noDuplicates = true;
                 for (Delivery ele: dupList) {
-                    if (dupList.isEmpty()) {
-                        // adding to empty list, noDuplicates = true
-                        break;
-                    } else if (ele.getLatLng().equals(delivery.getLatLng())) {
+                    if (ele.getLatLng().equals(delivery.getLatLng())) {
                         // delivery is already in the list.
                         noDuplicates = false;
                         Toast.makeText(MapsActivity.this, "The Address is already on the List", Toast.LENGTH_LONG).show();
@@ -174,20 +172,22 @@ public class MapsActivity extends FragmentActivity implements
         
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             // permission is granted
+            googleMap.setOnMarkerClickListener(this);
             mMap.setMyLocationEnabled(true);
-            mMap.setTrafficEnabled(true);
+//            mMap.setTrafficEnabled(true);     TODO: add toolbar button to enable/disable traffic.
             gotoDeviceLocation();
             
-            // initializing selectedMarker with a marker with no title.
-            Marker marker = mMap.addMarker(new MarkerOptions().position(new LatLng(999999, 9999999)));
+            LatLng nonExistant = new LatLng(9999999, 9999999);
+            
+            // initializing selectedMarker with a non existant location
+            Marker marker = mMap.addMarker(new MarkerOptions().position(nonExistant));
             selectedMarker = marker;
             selectedMarker.remove();
             
-            // initializing currentPolyline with a line with no title.
-            Polyline polyline = mMap.addPolyline(new PolylineOptions().add(new LatLng(999999, 99999999)));
+            // initializing currentPolyline with a line with non existant location
+            Polyline polyline = mMap.addPolyline(new PolylineOptions().add(nonExistant));
             currentPolyline = polyline;
             polyline.remove();
-//            mainMarker.setVisible(false);
         }
     }
     
@@ -215,6 +215,7 @@ public class MapsActivity extends FragmentActivity implements
                         workMarker = mMap.addMarker(new MarkerOptions()
                                 .title("Work").position(workLatLng)
                                 .icon(bitmapDescriptorFromVector(mContext, R.drawable.ic_work_black_24dp)));
+                        // TODO: add different icon for Work marker.
                         markerList.add(workMarker);
 
                     }
@@ -259,6 +260,7 @@ public class MapsActivity extends FragmentActivity implements
                 // delivery found
                 ele.showInfoWindow();
                 selectedMarker = ele;
+                
                 break;
             }
         }
@@ -267,10 +269,10 @@ public class MapsActivity extends FragmentActivity implements
     @Override
     public boolean onMarkerClick(Marker marker) {
         this.selectedMarker = marker;
-        
+        selectedMarker.showInfoWindow();
+        Log.i(TAG, "onMarkerClick: " + marker.toString());
         return true;
     }
-    
     
     /**
      * Perform this action when Delete button is pressed.
@@ -320,7 +322,6 @@ public class MapsActivity extends FragmentActivity implements
             }
             
             // Getting URL to the Google Directions API
-//            String url = getDirectionsUrl(origin, waypointList);
             String url = getDirectionsUrlWithWaypoints(workMarker.getPosition(), waypointList);
             
             DownloadTask downloadTask = new DownloadTask();
@@ -384,7 +385,7 @@ public class MapsActivity extends FragmentActivity implements
         @Override
         protected void onPostExecute(List<List<HashMap<String, String>>> result) {
             ArrayList points = null;
-            PolylineOptions lineOptions = new PolylineOptions().add(new LatLng(999999, 99999999));
+            PolylineOptions lineOptions = new PolylineOptions().add(new LatLng(999999, 999999));
             MarkerOptions markerOptions = new MarkerOptions();
             
             for (int i = 0; i < result.size(); i++) {
@@ -409,7 +410,7 @@ public class MapsActivity extends FragmentActivity implements
                 lineOptions.geodesic(true);
                 
             }
-            
+            Log.i(TAG, "onPostExecute: " + currentPolyline.toString());
             // Drawing polyline in the Google Map for the i-th route
             currentPolyline = mMap.addPolyline(lineOptions);
         }
@@ -417,8 +418,8 @@ public class MapsActivity extends FragmentActivity implements
     
     /**
      * Creates roundTrip with deliveries as the waypoints.
-     * @param origin
-     * @param waypointList
+     * @param origin The User's current location or work.
+     * @param waypointList The list of deliveries being listed as waypoints.
      * @return
      */
     private String getDirectionsUrlWithWaypoints(LatLng origin, List<LatLng> waypointList) {
@@ -450,8 +451,8 @@ public class MapsActivity extends FragmentActivity implements
         
         // Building the url to the web service
         String url = "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters;
-        System.out.println(url);
-        
+    
+        Log.d(TAG, "getDirectionsUrlWithWaypoints() returned: " + url);
         return url;
     }
     
