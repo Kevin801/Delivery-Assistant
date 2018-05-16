@@ -2,11 +2,17 @@ package kevin801.deliveryassistant.maps;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.AsyncTask;
+import android.support.annotation.DrawableRes;
 import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
@@ -18,6 +24,7 @@ import android.view.View;
 import android.widget.Toast;
 
 import com.google.android.gms.common.api.Status;
+import com.google.android.gms.dynamic.ObjectWrapper;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.Place;
@@ -28,6 +35,8 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -64,9 +73,17 @@ public class MapsActivity extends FragmentActivity implements
     private FusedLocationProviderClient mFusedLocationProviderClient;
     private DeliveriesListAdapter mAdapter;
     private RecyclerView.LayoutManager mLayoutManager;
+    
     private ArrayList<Marker> markers;
     private Marker selectedMarker;
+    /**
+     * The marker where the user's work is located
+     */
+    private Marker mainMarker;
     private Polyline currentPolyline;
+    private LatLng workLatLng = null;
+    private LatLng currLatLng;
+    private Context mContext;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,7 +98,7 @@ public class MapsActivity extends FragmentActivity implements
                 .getFusedLocationProviderClient(this);
         
         markers = new ArrayList<>();
-        
+        mContext = this;
         setUpListView();
         setUpAutoComplete();
         
@@ -93,7 +110,7 @@ public class MapsActivity extends FragmentActivity implements
         mLayoutManager = new LinearLayoutManager(this);
         mRecyclerListView.setLayoutManager(mLayoutManager);
         
-        mAdapter = new DeliveriesListAdapter(this, new ArrayList<Delivery>());
+        mAdapter = new DeliveriesListAdapter(mContext, new ArrayList<Delivery>());
         mRecyclerListView.setAdapter(mAdapter);
         
         mAdapter.setOnClick(this);
@@ -135,7 +152,7 @@ public class MapsActivity extends FragmentActivity implements
                     markers.add(marker);
                     marker.showInfoWindow();
                     selectedMarker = marker;
-                    addDeliveryToList(delivery);
+                    mAdapter.addDelivery(delivery);
                 }
                 gotoPlaceLocation(place);
                 
@@ -150,14 +167,6 @@ public class MapsActivity extends FragmentActivity implements
         });
     }
     
-    /**
-     * Used to add Delivery to a list view.
-     *
-     * @param delivery The Delivery containing the address to be added to the view to add the marker.
-     */
-    private void addDeliveryToList(Delivery delivery) {
-        mAdapter.addDelivery(delivery);
-    }
     
     @Override
     public void onMapReady(GoogleMap googleMap) {
@@ -177,7 +186,10 @@ public class MapsActivity extends FragmentActivity implements
             // initializing currentPolyline with a line with no title.
             Polyline polyline = mMap.addPolyline(new PolylineOptions().add(new LatLng(999999, 99999999)));
             currentPolyline = polyline;
-            polyline.remove();
+            polyline.setVisible(false);
+    
+
+//            mainMarker.setVisible(false);
             
         }
     }
@@ -194,18 +206,38 @@ public class MapsActivity extends FragmentActivity implements
                     if (task.isSuccessful()) {
                         // Set the map's camera position to the current location of the device.
                         Location location = task.getResult();
-                        LatLng currentLatLng =
-                                new LatLng(location.getLatitude(),
+                        currLatLng = new LatLng(location.getLatitude(),
                                         location.getLongitude());
                         
-                        CameraUpdate update = CameraUpdateFactory.newLatLngZoom(currentLatLng, 15.0F);
+                        CameraUpdate update = CameraUpdateFactory.newLatLngZoom(currLatLng, 15.0F);
                         mMap.moveCamera(update);
+    
+                        if (workLatLng == null) { // default to user location.
+                            workLatLng = currLatLng;
+                        }
+                        mainMarker = mMap.addMarker(new MarkerOptions()
+                                .title("Work").position(workLatLng)
+                                .icon(bitmapDescriptorFromVector(mContext, R.drawable.ic_work_black_24dp)));
+                        markers.add(mainMarker);
+
                     }
                 }
             });
         } catch (SecurityException e) {
             Log.e("Exception: %s", e.getMessage());
         }
+    }
+    
+    private BitmapDescriptor bitmapDescriptorFromVector(Context context, @DrawableRes int vectorDrawableResourceId) {
+        Drawable background = ContextCompat.getDrawable(context, vectorDrawableResourceId);
+        background.setBounds(0, 0, background.getIntrinsicWidth(), background.getIntrinsicHeight());
+        Drawable vectorDrawable = ContextCompat.getDrawable(context, vectorDrawableResourceId);
+        vectorDrawable.setBounds(40, 20, vectorDrawable.getIntrinsicWidth() + 40, vectorDrawable.getIntrinsicHeight() + 20);
+        Bitmap bitmap = Bitmap.createBitmap(background.getIntrinsicWidth(), background.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        background.draw(canvas);
+        vectorDrawable.draw(canvas);
+        return BitmapDescriptorFactory.fromBitmap(bitmap);
     }
     
     /**
@@ -235,13 +267,24 @@ public class MapsActivity extends FragmentActivity implements
         }
     }
     
+    @Override
+    public boolean onMarkerClick(Marker marker) {
+        Marker copy = mMap.addMarker(new MarkerOptions().title(""));
+        copy = marker;
+        this.selectedMarker = copy;
+        copy.remove();
+        
+        return true;
+    }
+    
+    
     /**
      * Perform this action when Delete button is pressed.
      *
      * @param view The View.
      */
     public void deleteMarkerButton(View view) {
-        if (selectedMarker.isInfoWindowShown()) {
+        if (selectedMarker != mainMarker && selectedMarker.isInfoWindowShown()) {
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle(R.string.delete_warning_title);
             builder.setMessage(R.string.delete_warning_message);
@@ -273,12 +316,16 @@ public class MapsActivity extends FragmentActivity implements
         
         currentPolyline.remove();
         // Checks, whether start and end locations are captured
-        if (markers.size() >= 2) {
-            LatLng origin = (LatLng) markers.get(0).getPosition();
-            LatLng dest = (LatLng) markers.get(1).getPosition();
+        if (markers.size() >= 1) {
+            List<LatLng> waypointList = new ArrayList<>();
+            
+            for (int i = 0; i < markers.size(); i++) {
+                waypointList.add(markers.get(i).getPosition());
+            }
             
             // Getting URL to the Google Directions API
-            String url = getDirectionsUrl(origin, dest);
+//            String url = getDirectionsUrl(origin, waypointList);
+            String url = getDirectionsUrlWithWaypoints(mainMarker.getPosition(), waypointList);
             
             DownloadTask downloadTask = new DownloadTask();
             
@@ -287,15 +334,9 @@ public class MapsActivity extends FragmentActivity implements
         }
     }
     
-    @Override
-    public boolean onMarkerClick(Marker marker) {
-        this.selectedMarker = marker;
-        return true;
-    }
-    
     /*
      *
-     *  BELOW CODE COURTESY OF:
+     *  CODE BELOW COURTESY OF:
      * https://www.journaldev.com/13373/android-google-map-drawing-route-two-points
      *
      */
@@ -347,7 +388,7 @@ public class MapsActivity extends FragmentActivity implements
         @Override
         protected void onPostExecute(List<List<HashMap<String, String>>> result) {
             ArrayList points = null;
-            PolylineOptions lineOptions = null;
+            PolylineOptions lineOptions = new PolylineOptions().add(new LatLng(999999, 99999999));
             MarkerOptions markerOptions = new MarkerOptions();
             
             for (int i = 0; i < result.size(); i++) {
@@ -378,26 +419,73 @@ public class MapsActivity extends FragmentActivity implements
         }
     }
     
+    /**
+     * Creates URI with only destination and origin/
+     * @param origin
+     * @param dest
+     * @return
+     */
+    @Deprecated
     private String getDirectionsUrl(LatLng origin, LatLng dest) {
+
+        // Origin of route
+        String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
+
+        // Destination of route
+        String str_dest = "destination=" + dest.latitude + "," + dest.longitude;
+
+        // Sensor enabled
+        String sensor = "sensor=false";
+        String mode = "mode=driving";
+
+        // Building the parameters to the web service
+        String parameters = str_origin + "&" + str_dest + "&" + sensor + "&" + mode;
+
+        // Output format
+        String output = "json";
+
+        // Building the url to the web service
+        String url = "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters;
+
+        return url;
+    }
+    
+    /**
+     * Creates roundTrip with deliveries as the waypoints.
+     * @param origin
+     * @param waypointList
+     * @return
+     */
+    private String getDirectionsUrlWithWaypoints(LatLng origin, List<LatLng> waypointList) {
         
         // Origin of route
         String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
-        
+
         // Destination of route
-        String str_dest = "destination=" + dest.latitude + "," + dest.longitude;
+        String str_dest = "destination=" + origin.latitude + "," + origin.longitude;
+    
+        // startWaypoints, optimize true.
+        String waypointStart = "waypoints=optimize:true";
+        
+        // add Waypoints, separate by  |*waypointLatLng*
+        String waypoints = "";
+        for (LatLng ele : waypointList) {
+            waypoints = waypoints + "|" + ele.latitude + "," + ele.longitude;
+        }
         
         // Sensor enabled
         String sensor = "sensor=false";
         String mode = "mode=driving";
-        
+
         // Building the parameters to the web service
-        String parameters = str_origin + "&" + str_dest + "&" + sensor + "&" + mode;
+        String parameters = str_origin + "&" + str_dest + "&" + waypointStart + waypoints + "&" + sensor + "&" + mode ;
         
         // Output format
         String output = "json";
         
         // Building the url to the web service
         String url = "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters;
+        System.out.println(url);
         
         return url;
     }
