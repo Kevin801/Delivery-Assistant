@@ -26,6 +26,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.Toast;
 
@@ -91,6 +92,7 @@ public class MapsActivity extends AppCompatActivity implements
     private LatLng workLatLng = null;
     private LatLng currLatLng;
     private Context mContext;
+    private Button navigateButton;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,37 +105,15 @@ public class MapsActivity extends AppCompatActivity implements
         
         mFusedLocationProviderClient = LocationServices
                 .getFusedLocationProviderClient(this);
-    
+        
         markerList = new ArrayList<>();
         mContext = this;
         setUpListView();
         setUpAutoComplete();
-    }
-    
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.activity_maps_toolbar, menu);
-        CheckBox checkBox = (CheckBox) menu.findItem(R.id.action_display_traffic).getActionView();
         
-        return true;
-    }
-    
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.action_display_traffic:
-                if (item.isChecked()) {
-                    item.setChecked(false);
-                    mMap.setTrafficEnabled(false);
-                } else {
-                    item.setChecked(true);
-                    mMap.setTrafficEnabled(true);
-                }
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
-        }
+        navigateButton = findViewById(R.id.navigate_button);
+        navigateButton.setClickable(false);
+        
     }
     
     private void setUpListView() {
@@ -165,7 +145,7 @@ public class MapsActivity extends AppCompatActivity implements
                 ArrayList<Delivery> dupList = (ArrayList<Delivery>) mAdapter.getDeliveryList();
                 
                 boolean noDuplicates = true;
-                for (Delivery ele: dupList) {
+                for (Delivery ele : dupList) {
                     if (ele.getLatLng().equals(delivery.getLatLng())) {
                         // delivery is already in the list.
                         noDuplicates = false;
@@ -177,11 +157,12 @@ public class MapsActivity extends AppCompatActivity implements
                 if (noDuplicates) {
                     // not contained in list
                     Marker marker = mMap.addMarker(inputMarker);
-    
+                    
                     markerList.add(marker);
                     marker.showInfoWindow();
                     selectedMarker = marker;
                     mAdapter.addDelivery(delivery);
+                    drawPolylines();
                 }
                 gotoPlaceLocation(place);
                 
@@ -196,6 +177,29 @@ public class MapsActivity extends AppCompatActivity implements
         });
     }
     
+    /**
+     * used to draw lines every time a marker is added or deleted.
+     * Use sparingly; limited amount of uses per day.
+     */
+    private void drawPolylines() {
+        currentPolyline.remove();
+        // Checks, whether start and end locations are captured
+        if (markerList.size() >= 1) {
+            List<LatLng> waypointList = new ArrayList<>();
+            
+            for (int i = 0; i < markerList.size(); i++) {
+                waypointList.add(markerList.get(i).getPosition());
+            }
+            
+            // Getting URL to the Google Directions API
+            String url = getDirectionsUrlWithWaypoints(workMarker.getPosition(), waypointList);
+            
+            DownloadTask downloadTask = new DownloadTask();
+            
+            // Start downloading json data from Google Directions API
+            downloadTask.execute(url);
+        }
+    }
     
     @Override
     public void onMapReady(GoogleMap googleMap) {
@@ -207,7 +211,7 @@ public class MapsActivity extends AppCompatActivity implements
             mMap.setMyLocationEnabled(true);
             mMap.getUiSettings().setZoomControlsEnabled(true);
             mMap.getUiSettings().setMapToolbarEnabled(false);
-            
+
 //            mMap.setTrafficEnabled(true);     TODO: add toolbar button to enable/disable traffic.
             gotoDeviceLocation();
             
@@ -225,6 +229,32 @@ public class MapsActivity extends AppCompatActivity implements
         }
     }
     
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.activity_maps_toolbar, menu);
+        CheckBox checkBox = (CheckBox) menu.findItem(R.id.action_display_traffic).getActionView();
+        
+        return true;
+    }
+    
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.action_display_traffic:
+                if (item.isChecked()) {
+                    item.setChecked(false);
+                    mMap.setTrafficEnabled(false);
+                } else {
+                    item.setChecked(true);
+                    mMap.setTrafficEnabled(true);
+                }
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+    
     /**
      * Moves the camera to the device's location.
      */
@@ -238,11 +268,11 @@ public class MapsActivity extends AppCompatActivity implements
                         // Set the map's camera position to the current location of the device.
                         Location location = task.getResult();
                         currLatLng = new LatLng(location.getLatitude(),
-                                        location.getLongitude());
+                                location.getLongitude());
                         
                         CameraUpdate update = CameraUpdateFactory.newLatLngZoom(currLatLng, 15.0F);
                         mMap.moveCamera(update);
-    
+                        
                         if (workLatLng == null) { // default to user location.
                             workLatLng = currLatLng;
                         }
@@ -251,7 +281,7 @@ public class MapsActivity extends AppCompatActivity implements
                                 .icon(bitmapDescriptorFromVector(mContext, R.drawable.ic_work_black_24dp)));
                         // TODO: add different icon for Work marker.
                         markerList.add(workMarker);
-
+                        
                     }
                 }
             });
@@ -330,8 +360,14 @@ public class MapsActivity extends AppCompatActivity implements
                         markerList.remove(selectedMarker); // remove from markers List
                         selectedMarker.remove(); // remove from map
                         currentPolyline.remove();
-    
+                        
                         mAdapter.removeDelivery(mAdapter.findDeliveryByMarker(selectedMarker));
+                        
+                        if (!mAdapter.getDeliveryList().isEmpty()) {
+                            // not empty, draw lines
+                            drawPolylines();
+                        }
+                        
                     }
                 }
             });
@@ -348,25 +384,10 @@ public class MapsActivity extends AppCompatActivity implements
         }
     }
     
-    public void calculateButton(View view) {
+    public void navigateButton(View view) {
+        // TODO: set clickable, start navigation
         
-        currentPolyline.remove();
-        // Checks, whether start and end locations are captured
-        if (markerList.size() >= 1) {
-            List<LatLng> waypointList = new ArrayList<>();
-            
-            for (int i = 0; i < markerList.size(); i++) {
-                waypointList.add(markerList.get(i).getPosition());
-            }
-            
-            // Getting URL to the Google Directions API
-            String url = getDirectionsUrlWithWaypoints(workMarker.getPosition(), waypointList);
-            
-            DownloadTask downloadTask = new DownloadTask();
-            
-            // Start downloading json data from Google Directions API
-            downloadTask.execute(url);
-        }
+        
     }
     
     /*
@@ -456,7 +477,8 @@ public class MapsActivity extends AppCompatActivity implements
     
     /**
      * Creates roundTrip with deliveries as the waypoints.
-     * @param origin The User's current location or work.
+     *
+     * @param origin       The User's current location or work.
      * @param waypointList The list of deliveries being listed as waypoints.
      * @return
      */
@@ -464,10 +486,10 @@ public class MapsActivity extends AppCompatActivity implements
         
         // Origin of route
         String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
-
+        
         // Destination of route
         String str_dest = "destination=" + origin.latitude + "," + origin.longitude;
-    
+        
         // startWaypoints, optimize true.
         String waypointStart = "waypoints=optimize:true";
         
@@ -480,16 +502,16 @@ public class MapsActivity extends AppCompatActivity implements
         // Sensor enabled
         String sensor = "sensor=false";
         String mode = "mode=driving";
-
+        
         // Building the parameters to the web service
-        String parameters = str_origin + "&" + str_dest + "&" + waypointStart + waypoints + "&" + sensor + "&" + mode ;
+        String parameters = str_origin + "&" + str_dest + "&" + waypointStart + waypoints + "&" + sensor + "&" + mode;
         
         // Output format
         String output = "json";
         
         // Building the url to the web service
         String url = "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters;
-    
+        
         Log.d(TAG, "getDirectionsUrlWithWaypoints() returned: " + url);
         return url;
     }

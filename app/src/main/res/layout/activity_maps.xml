@@ -29,6 +29,7 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_below="@+id/top_panel"
+            android:layout_above="@id/button_panel"
             android:layout_weight="7"
             tools:context="kevin801.deliveryassistant.maps.MapsActivity" />
 
@@ -36,6 +37,7 @@
     <LinearLayout
         android:id="@+id/button_panel"
         android:orientation="horizontal"
+        android:layout_below="@id/map"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:weightSum="0">
@@ -50,13 +52,14 @@
             android:layout_weight="1" />
 
         <Button
-            android:id="@+id/calculate_button"
+            android:id="@+id/navigate_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/calculate_button"
+            android:text="@string/navigate_button"
             android:layout_margin="6dp"
-            android:onClick="calculateButton"
-            android:layout_weight="1" />
+            android:onClick="navigateButton"
+            android:layout_weight="1"
+            android:clickable="false"/>
 
     </LinearLayout>
 
