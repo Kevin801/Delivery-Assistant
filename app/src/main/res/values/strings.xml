@@ -4,8 +4,9 @@
     <string name="navigation_drawer_close">Close navigation drawer</string>
     <string name="nav_header_title">Delivery Assistant</string>
     <string name="nav_header_desc">Navigation header</string>
-    <string name="action_settings">Settings</string>
-    <string name="title_activity_maps">Map</string>
+
+    <!--Strings Relating to MapsActivity-->
+    <string name="title_activity_maps">Google Maps</string>
     <string name="delete_button">Delete</string>
     <string name="calculate_button">Calculate</string>
     <string name="delevery_dist_list">Dist:</string>
@@ -15,7 +16,14 @@
     <string name="delete_warnining_confirm">Yes</string>
     <string name="delete_warnining_deny">No</string>
     <string name="no_marker_selected">No marker currently selected.</string>
+
     <string name="title_activity_settings">Settings</string>
+
+    <!--Strings: Toolbar-->
+    <string name="show_or_Hide_traffic">Display Traffic</string>
+
+
+
 
     <!-- Strings related to Settings -->
 
@@ -29,7 +37,6 @@
 
     <string name="pref_title_display_name">Work Address</string>
     <string name="pref_work_location">Your work address</string>
-
 
     <!-- Example settings for Data & Sync -->
     <string name="pref_header_data_sync">Data &amp; sync</string>

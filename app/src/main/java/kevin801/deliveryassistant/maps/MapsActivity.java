@@ -17,10 +17,16 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.Toast;
 
 import com.google.android.gms.common.api.Status;
@@ -64,7 +70,7 @@ import kevin801.deliveryassistant.maps.list.DeliveriesListAdapter;
 import kevin801.deliveryassistant.maps.list.Delivery;
 import kevin801.deliveryassistant.maps.list.OnItemClicked;
 
-public class MapsActivity extends FragmentActivity implements
+public class MapsActivity extends AppCompatActivity implements
         OnMapReadyCallback,
         OnItemClicked,
         GoogleMap.OnMarkerClickListener {
@@ -102,7 +108,32 @@ public class MapsActivity extends FragmentActivity implements
         mContext = this;
         setUpListView();
         setUpAutoComplete();
+    }
+    
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.activity_maps_toolbar, menu);
+        CheckBox checkBox = (CheckBox) menu.findItem(R.id.action_display_traffic).getActionView();
         
+        return true;
+    }
+    
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.action_display_traffic:
+                if (item.isChecked()) {
+                    item.setChecked(false);
+                    mMap.setTrafficEnabled(false);
+                } else {
+                    item.setChecked(true);
+                    mMap.setTrafficEnabled(true);
+                }
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
     
     private void setUpListView() {
@@ -176,6 +207,7 @@ public class MapsActivity extends FragmentActivity implements
             mMap.setMyLocationEnabled(true);
             mMap.getUiSettings().setZoomControlsEnabled(true);
             mMap.getUiSettings().setMapToolbarEnabled(false);
+            
 //            mMap.setTrafficEnabled(true);     TODO: add toolbar button to enable/disable traffic.
             gotoDeviceLocation();
             
