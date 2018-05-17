@@ -109,7 +109,7 @@ public class MapsActivity extends AppCompatActivity implements
         markerList = new ArrayList<>();
         mContext = this;
         setUpListView();
-        setUpAutoComplete();
+        setUpGoogleMapsSearch();
         
         navigateButton = findViewById(R.id.navigate_button);
         navigateButton.setClickable(false);
@@ -128,7 +128,7 @@ public class MapsActivity extends AppCompatActivity implements
         mAdapter.setOnClick(this);
     }
     
-    private void setUpAutoComplete() {
+    private void setUpGoogleMapsSearch() {
         PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment)
                 getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
         
@@ -163,6 +163,7 @@ public class MapsActivity extends AppCompatActivity implements
                     selectedMarker = marker;
                     mAdapter.addDelivery(delivery);
                     drawPolylines();
+                    navigateButton.setClickable(true);
                 }
                 gotoPlaceLocation(place);
                 
@@ -358,7 +359,7 @@ public class MapsActivity extends AppCompatActivity implements
                 public void onClick(DialogInterface dialog, int which) {
                     if (selectedMarker.isInfoWindowShown()) {
                         markerList.remove(selectedMarker); // remove from markers List
-                        selectedMarker.remove(); // remove from map
+                        selectedMarker.remove();
                         currentPolyline.remove();
                         
                         mAdapter.removeDelivery(mAdapter.findDeliveryByMarker(selectedMarker));
@@ -366,8 +367,11 @@ public class MapsActivity extends AppCompatActivity implements
                         if (!mAdapter.getDeliveryList().isEmpty()) {
                             // not empty, draw lines
                             drawPolylines();
+                        } else {
+                            // empty
+                            navigateButton.setClickable(false);
                         }
-                        
+
                     }
                 }
             });
