@@ -80,8 +80,7 @@ public class DirectionsJSONParser {
     
                     travelDataHM.put("endLat", endLat);
                     travelDataHM.put("endLng", endLng);
-    
-    
+                    
                     travelDataList.add(travelDataHM);
                     
                     /** Traversing all steps */

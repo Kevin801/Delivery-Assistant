@@ -11,21 +11,19 @@ import java.util.Objects;
 public class Delivery implements Comparable<Delivery>{
     
     private String address, prevAddress;
-    private double distance, time, tip, delta;
+    private double distance, duration, tip, delta;
     private LatLng prevLatLng, latLng;
-    private Place place;
     
     
-    public Delivery(Place place) {
-        address = place.getAddress().toString();
+    public Delivery(String address, LatLng latLng) {
+        this.address = address;
+        this.latLng = latLng;
         prevAddress = "";
-        distance = -1; // change to get delivery distance and time via google map's search.
-        time = -1;
+        distance = -1;
+        duration = -1;
         tip = 0;
         delta = 0;
         prevLatLng = null;
-        latLng = place.getLatLng();
-        this.place = place;
     }
     
     public String getAddress() {
@@ -44,16 +42,12 @@ public class Delivery implements Comparable<Delivery>{
         this.distance = distance;
     }
 
-    public double getTime() {
-        return time;
+    public double getDuration() {
+        return duration;
     }
     
-    public void setTime(double time) {
-        this.time = time;
-    }
-    
-    public Place getPlace() {
-        return place;
+    public void setDuration(double duration) {
+        this.duration = duration;
     }
     
     public LatLng getPrevLatLng() {
@@ -109,20 +103,19 @@ public class Delivery implements Comparable<Delivery>{
         if (o == null || getClass() != o.getClass()) return false;
         Delivery delivery = (Delivery) o;
         return Double.compare(delivery.distance, distance) == 0 &&
-                Double.compare(delivery.time, time) == 0 &&
+                Double.compare(delivery.duration, duration) == 0 &&
                 Double.compare(delivery.tip, tip) == 0 &&
                 Double.compare(delivery.delta, delta) == 0 &&
                 Objects.equals(address, delivery.address) &&
                 Objects.equals(prevAddress, delivery.prevAddress) &&
                 Objects.equals(prevLatLng, delivery.prevLatLng) &&
-                Objects.equals(latLng, delivery.latLng) &&
-                Objects.equals(place, delivery.place);
+                Objects.equals(latLng, delivery.latLng) ;
     }
     
     @Override
     public int hashCode() {
         
-        return Objects.hash(address, prevAddress, distance, time, tip, delta, prevLatLng, latLng, place);
+        return Objects.hash(address, prevAddress, distance, duration, tip, delta, prevLatLng, latLng);
     }
     
     @Override
@@ -131,7 +124,7 @@ public class Delivery implements Comparable<Delivery>{
                 "address='" + address + '\'' +
                 ", prevAddress='" + prevAddress + '\'' +
                 ", distance=" + distance +
-                ", time=" + time +
+                ", duration=" + duration +
                 ", tip=" + tip +
                 ", delta=" + delta +
                 ", prevLatLng=" + prevLatLng +

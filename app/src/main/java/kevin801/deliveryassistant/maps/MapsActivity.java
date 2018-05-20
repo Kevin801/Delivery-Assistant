@@ -133,12 +133,12 @@ public class MapsActivity extends AppCompatActivity implements
             @Override
             public void onPlaceSelected(Place place) {
                 // getting marker information ready
-                final LatLng latLngLoc = place.getLatLng();
+                LatLng latLngLoc = place.getLatLng();
                 MarkerOptions inputMarker = new MarkerOptions()
                         .position(latLngLoc)
                         .title(Objects.requireNonNull(place.getAddress()).toString());
                 
-                Delivery delivery = new Delivery(place);
+                Delivery delivery = new Delivery(place.getAddress().toString(),latLngLoc);
                 
                 ArrayList<Delivery> dupList = (ArrayList<Delivery>) mAdapter.getDeliveryList();
                 
@@ -158,19 +158,13 @@ public class MapsActivity extends AppCompatActivity implements
                     markerList.add(marker);
                     marker.showInfoWindow();
                     selectedMarker = marker;
-
+                    
                     mAdapter.addDeliveryToList(delivery);
                     
                     drawPolylines(); // will update closest delivery
-
-//                    if (closestDelivery == null || mAdapter.getDeliveryList().size() == 1) {
-//                        closestDelivery = mAdapter.getDeliveryList().get(0);
-//                    }
-                    
                     navigateButton.setClickable(true);
                 }
-                
-                gotoPlaceLocation(place);
+                gotoLatLngLocation(place.getLatLng());
                 Log.i(TAG, "Place: " + place.getName());
             }
             
@@ -277,6 +271,7 @@ public class MapsActivity extends AppCompatActivity implements
                         if (workLatLng == null) { // default to user location.
                             workLatLng = currLatLng;
                         }
+                        mAdapter.addDeliveryToList(new Delivery("Work", workLatLng));
                         workMarker = mMap.addMarker(new MarkerOptions()
                                 .title("Work").position(workLatLng)
                                 .icon(bitmapDescriptorFromVector(mContext, R.drawable.ic_work_black_24dp)));
@@ -308,8 +303,7 @@ public class MapsActivity extends AppCompatActivity implements
      *
      * @param place The place Object with the information containing the Latitude and Longitude.
      */
-    public void gotoPlaceLocation(Place place) {
-        LatLng latLng = place.getLatLng();
+    public void gotoLatLngLocation(LatLng latLng) {
         mMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
     }
     
@@ -318,7 +312,7 @@ public class MapsActivity extends AppCompatActivity implements
         List<Delivery> list = mAdapter.getDeliveryList();
         
         Delivery delivery = (Delivery) list.get(position);
-        gotoPlaceLocation(delivery.getPlace());
+        gotoLatLngLocation(delivery.getLatLng());
         
         for (Marker ele : markerList) {
             if (ele.getPosition().equals(delivery.getLatLng())) {
@@ -407,7 +401,7 @@ public class MapsActivity extends AppCompatActivity implements
     
     /*
      *
-     *  CODE BELOW COURTESY OF:
+     * (most) CODE BELOW COURTESY OF:
      * https://www.journaldev.com/13373/android-google-map-drawing-route-two-points
      *
      */
@@ -465,6 +459,7 @@ public class MapsActivity extends AppCompatActivity implements
             ArrayList<String> durationList = new ArrayList();
             ArrayList<String> startAddressList = new ArrayList();
             ArrayList<String> endAddressList = new ArrayList();
+            
             ArrayList<LatLng> startLatLngList = new ArrayList();
             ArrayList<LatLng> endLatLngList = new ArrayList();
             
@@ -541,15 +536,13 @@ public class MapsActivity extends AppCompatActivity implements
                 double endLat = endLatLngList.get(idxOfLeg).latitude;
                 double endLng = endLatLngList.get(idxOfLeg).longitude;
     
-                if ( (startLat != endLat) && (startLng != endLng) ) {
+                if ((startLat != endLat) && (startLng != endLng)) {
                     // startLatLng and endLatLng are not the same.
-                    
                     PriorityQueue<Delivery> deliveryPQ = new PriorityQueue<>();
                     
-                    List<Delivery> deliveryList = mAdapter.getDeliveryList();
-                    
-                    for (Delivery deliveryCopy : deliveryList) {
-                        // for every delivery
+                    for (Delivery deliveryCopy : mAdapter.getDeliveryList()) {
+                        // for every delivery, find the smallest delta.
+                        // delta will be the difference of two Lat Lng numbers.
                         
                         double delta = Math.abs(deliveryCopy.getLatLng().latitude - endLat)
                                 + Math.abs(deliveryCopy.getLatLng().longitude - endLng);
@@ -559,14 +552,20 @@ public class MapsActivity extends AppCompatActivity implements
                     }
                     // closest delivery to the current iteration of Legs.
                     Delivery closestDelivery = deliveryPQ.peek();
+                    
+                    closestDelivery.setPrevAddress(startAddress);
+                    closestDelivery.setAddress(endAddress);
+                    
                     closestDelivery.setDistance(distance);
-                    closestDelivery.setTime(duration);
+                    closestDelivery.setDuration(duration);
                     closestDelivery.setPrevLatLng(new LatLng(startLat, startLng));
                     
-                    if (!newDeliveryList.contains(closestDelivery)){
-                        newDeliveryList.add(closestDelivery);
-                        Log.i(TAG, "onPostExecute: " + closestDelivery.toString());
-                    }
+                    newDeliveryList.add(closestDelivery);
+    
+//                    if (!newDeliveryList.contains(closestDelivery)){
+//                        newDeliveryList.add(closestDelivery);
+//                        Log.i(TAG, "onPostExecute: " + closestDelivery.toString());
+//                    }
                 }
             }
             mAdapter.updateList(newDeliveryList);

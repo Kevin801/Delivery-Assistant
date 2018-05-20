@@ -5,12 +5,23 @@
     android:padding="10dp">
 
     <TextView
-        android:id="@+id/address_row_item"
+        android:id="@+id/start_address_row_item"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
-        android:text="Address"
+        android:text="Start Address"
         android:maxWidth="290dp"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:textColor="@android:color/black" />
+
+    <TextView
+        android:id="@+id/end_address_row_item"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/start_address_row_item"
+        android:text="End Address"
+        android:maxWidth="300dp"
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:textColor="@android:color/black" />
 

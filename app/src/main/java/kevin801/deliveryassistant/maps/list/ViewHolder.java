@@ -8,17 +8,16 @@ import android.widget.TextView;
 import kevin801.deliveryassistant.R;
 
 public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
-    TextView tvAddress;
-    TextView tvTime;
-    TextView tvDistance;
+    public TextView tvStartAddress, tvEndAddress, tvTime, tvDistance;
     private OnItemClicked mListener;
     
     public ViewHolder(View view, OnItemClicked listener) {
         super(view);
-        tvAddress = (TextView) itemView.findViewById(R.id.address_row_item);
-        tvTime = (TextView) itemView.findViewById(R.id.time_row_item);
-        tvDistance = (TextView) itemView.findViewById(R.id.distance_row_item);
-        mListener = listener;
+        tvStartAddress  = (TextView) itemView.findViewById(R.id.start_address_row_item);
+        tvEndAddress    = (TextView) itemView.findViewById(R.id.end_address_row_item);
+        tvTime          = (TextView) itemView.findViewById(R.id.time_row_item);
+        tvDistance      = (TextView) itemView.findViewById(R.id.distance_row_item);
+        mListener       = listener;
         view.setOnClickListener(this);
     }
     
