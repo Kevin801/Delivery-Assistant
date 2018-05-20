@@ -4,34 +4,31 @@ import android.Manifest;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.annotation.DrawableRes;
 import android.support.annotation.NonNull;
-import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.Toast;
 
 import com.google.android.gms.common.api.Status;
-import com.google.android.gms.dynamic.ObjectWrapper;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.Place;
@@ -44,7 +41,6 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -53,6 +49,8 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -62,9 +60,11 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.PriorityQueue;
 
 import kevin801.deliveryassistant.R;
 import kevin801.deliveryassistant.maps.list.DeliveriesListAdapter;
@@ -88,11 +88,16 @@ public class MapsActivity extends AppCompatActivity implements
      * The marker where the user's work is located
      */
     private Marker workMarker;
-    private Polyline currentPolyline;
     private LatLng workLatLng = null;
+    
+    private Polyline currentPolyline;
     private LatLng currLatLng;
+    
     private Context mContext;
     private Button navigateButton;
+    private String googleNavURI;
+    String result;
+//    private Delivery closestDelivery;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,21 +113,21 @@ public class MapsActivity extends AppCompatActivity implements
         
         markerList = new ArrayList<>();
         mContext = this;
-        setUpListView();
+        
+        setUpListView(new ArrayList<Delivery>());
         setUpGoogleMapsSearch();
         
         navigateButton = findViewById(R.id.navigate_button);
         navigateButton.setClickable(false);
-        
     }
     
-    private void setUpListView() {
+    private void setUpListView(List<Delivery> dataSet) {
         RecyclerView mRecyclerListView = (RecyclerView) findViewById(R.id.deliveries_listview);
         
         mLayoutManager = new LinearLayoutManager(this);
         mRecyclerListView.setLayoutManager(mLayoutManager);
         
-        mAdapter = new DeliveriesListAdapter(mContext, new ArrayList<Delivery>());
+        mAdapter = new DeliveriesListAdapter(mContext, dataSet);
         mRecyclerListView.setAdapter(mAdapter);
         
         mAdapter.setOnClick(this);
@@ -142,6 +147,7 @@ public class MapsActivity extends AppCompatActivity implements
                         .title(Objects.requireNonNull(place.getAddress()).toString());
                 
                 Delivery delivery = new Delivery(place);
+                
                 ArrayList<Delivery> dupList = (ArrayList<Delivery>) mAdapter.getDeliveryList();
                 
                 boolean noDuplicates = true;
@@ -157,16 +163,22 @@ public class MapsActivity extends AppCompatActivity implements
                 if (noDuplicates) {
                     // not contained in list
                     Marker marker = mMap.addMarker(inputMarker);
-                    
                     markerList.add(marker);
                     marker.showInfoWindow();
                     selectedMarker = marker;
-                    mAdapter.addDelivery(delivery);
-                    drawPolylines();
+
+                    mAdapter.addDeliveryToList(delivery);
+                    
+                    drawPolylines(); // will update closest delivery
+
+//                    if (closestDelivery == null || mAdapter.getDeliveryList().size() == 1) {
+//                        closestDelivery = mAdapter.getDeliveryList().get(0);
+//                    }
+                    
                     navigateButton.setClickable(true);
                 }
-                gotoPlaceLocation(place);
                 
+                gotoPlaceLocation(place);
                 Log.i(TAG, "Place: " + place.getName());
             }
             
@@ -186,17 +198,14 @@ public class MapsActivity extends AppCompatActivity implements
         currentPolyline.remove();
         // Checks, whether start and end locations are captured
         if (markerList.size() >= 1) {
+            // making waypoints as deliveries
             List<LatLng> waypointList = new ArrayList<>();
-            
             for (int i = 0; i < markerList.size(); i++) {
                 waypointList.add(markerList.get(i).getPosition());
             }
-            
             // Getting URL to the Google Directions API
             String url = getDirectionsUrlWithWaypoints(workMarker.getPosition(), waypointList);
-            
             DownloadTask downloadTask = new DownloadTask();
-            
             // Start downloading json data from Google Directions API
             downloadTask.execute(url);
         }
@@ -212,8 +221,7 @@ public class MapsActivity extends AppCompatActivity implements
             mMap.setMyLocationEnabled(true);
             mMap.getUiSettings().setZoomControlsEnabled(true);
             mMap.getUiSettings().setMapToolbarEnabled(false);
-
-//            mMap.setTrafficEnabled(true);     TODO: add toolbar button to enable/disable traffic.
+            
             gotoDeviceLocation();
             
             LatLng nonExistant = new LatLng(9999999, 9999999);
@@ -276,11 +284,12 @@ public class MapsActivity extends AppCompatActivity implements
                         
                         if (workLatLng == null) { // default to user location.
                             workLatLng = currLatLng;
+                            mAdapter.setWorkLatLng(workLatLng);
                         }
                         workMarker = mMap.addMarker(new MarkerOptions()
                                 .title("Work").position(workLatLng)
                                 .icon(bitmapDescriptorFromVector(mContext, R.drawable.ic_work_black_24dp)));
-                        // TODO: add different icon for Work marker.
+                        
                         markerList.add(workMarker);
                         
                     }
@@ -371,7 +380,7 @@ public class MapsActivity extends AppCompatActivity implements
                             // empty
                             navigateButton.setClickable(false);
                         }
-
+                        
                     }
                 }
             });
@@ -389,9 +398,14 @@ public class MapsActivity extends AppCompatActivity implements
     }
     
     public void navigateButton(View view) {
-        // TODO: set clickable, start navigation
-        
-        
+        try {
+            Uri gmmIntentUri = Uri.parse(googleNavURI);
+            Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
+            mapIntent.setPackage("com.google.android.apps.maps");
+            startActivity(mapIntent);
+        } catch (Exception e) {
+            Log.e("Exception: %s", e.getMessage());
+        }
     }
     
     /*
@@ -410,7 +424,6 @@ public class MapsActivity extends AppCompatActivity implements
             ParserTask parserTask = new ParserTask();
             parserTask.execute(result.toString());
         }
-        
         
         @Override
         protected Object doInBackground(Object[] url) {
@@ -437,45 +450,134 @@ public class MapsActivity extends AppCompatActivity implements
             try {
                 jObject = new JSONObject(jsonData[0]);
                 DirectionsJSONParser parser = new DirectionsJSONParser();
-                
                 routes = parser.parse(jObject);
+
+//                mAdapter.setClosestDelivery(parser.getDelivery(jObject));
+//                mAdapter.addWithUpdatedData(parser.getDelivery(jObject));
+            
+            
             } catch (Exception e) {
                 e.printStackTrace();
             }
             return routes;
         }
         
+        
         @Override
         protected void onPostExecute(List<List<HashMap<String, String>>> result) {
-            ArrayList points = null;
-            PolylineOptions lineOptions = new PolylineOptions().add(new LatLng(999999, 999999));
+            ArrayList points = new ArrayList(); // = null
+            PolylineOptions lineOptions = new PolylineOptions();
             MarkerOptions markerOptions = new MarkerOptions();
             
+            ArrayList<String> distanceList = new ArrayList();
+            ArrayList<String> durationList = new ArrayList();
+            ArrayList<String> startAddressList = new ArrayList();
+            ArrayList<String> endAddressList = new ArrayList();
+            ArrayList<LatLng> startLatLngList = new ArrayList();
+            ArrayList<LatLng> endLatLngList = new ArrayList();
+            
+            // for every List of List of HashMaps
             for (int i = 0; i < result.size(); i++) {
-                points = new ArrayList();
-                lineOptions = new PolylineOptions();
                 
-                List<HashMap<String, String>> path = result.get(i);
+                switch (i) {
+                    case 0: // 0 - path
+                        List<HashMap<String, String>> path = result.get(0);
+                        points = new ArrayList();
+                        lineOptions = new PolylineOptions();
+                        
+                        // for each hashtable, add to points
+                        for (int j = 0; j < path.size(); j++) {
+                            HashMap<String, String> point = path.get(j);
+                            
+                            double lat = Double.parseDouble(point.get("lat"));
+                            double lng = Double.parseDouble(point.get("lng"));
+                            LatLng position = new LatLng(lat, lng);
+                            
+                            points.add(position);
+                        }
+                        
+                        lineOptions.addAll(points);
+                        lineOptions.width(15);
+                        lineOptions.color(Color.BLUE);
+                        lineOptions.geodesic(true);
+                        
+                        Log.i(TAG, "onPostExecute: " + currentPolyline.toString());
+                        // Drawing polyline in the Google Map for the i-th route
+                        currentPolyline = mMap.addPolyline(lineOptions);
+                        
+                        break;
+                    
+                    case 1: // 1 - Travel Data
+                        List<HashMap<String, String>> travelDataListOfHM = result.get(1);
+                        
+                        // for each HashMap, add to it's lists
+                        for (int j = 0; j < travelDataListOfHM.size(); j++) {
+                            HashMap<String, String> travelData = travelDataListOfHM.get(j);
+                            // unpacking data from hashtable to new arrayList of each data type
+                            distanceList.add(travelData.get("distance"));
+                            durationList.add(travelData.get("distance"));
+    
+                            startAddressList.add(travelData.get("startAddress"));
+                            endAddressList.add(travelData.get("endAddress"));
+                            
+                            double lat = Double.parseDouble(travelData.get("startLat"));
+                            double lng = Double.parseDouble(travelData.get("startLng"));
+                            startLatLngList.add(new LatLng(lat, lng));
+    
+                            lat = Double.parseDouble(travelData.get("endLat"));
+                            lng = Double.parseDouble(travelData.get("endLng"));
+                            endLatLngList.add(new LatLng(lat, lng));
+                        }
+                        break;
+                }// end switch
+            } // all data recieved
+            
+            ArrayList<Delivery> newDeliveryList = new ArrayList<>();
+            
+            // for every json delivery, add it to a new delivery list, then send to mAdapter
+            for (int idxOfLeg = 0; idxOfLeg < endLatLngList.size(); idxOfLeg++) {
+                // unpacking data
+                String endAddress = endAddressList.get(idxOfLeg);
+                String startAddress = startAddressList.get(idxOfLeg);
+    
+                double distance =  Double.parseDouble(distanceList.get(idxOfLeg));
+                double duration = Double.parseDouble(durationList.get(idxOfLeg));
                 
-                for (int j = 0; j < path.size(); j++) {
-                    HashMap<String, String> point = path.get(j);
+                double startLat = startLatLngList.get(idxOfLeg).latitude;
+                double startLng = startLatLngList.get(idxOfLeg).longitude;
+                
+                double endLat = endLatLngList.get(idxOfLeg).latitude;
+                double endLng = endLatLngList.get(idxOfLeg).longitude;
+    
+                if ( (startLat != endLat) && (startLng != endLng) ) {
+                    // startLatLng and endLatLng are not the same.
                     
-                    double lat = Double.parseDouble(point.get("lat"));
-                    double lng = Double.parseDouble(point.get("lng"));
-                    LatLng position = new LatLng(lat, lng);
+                    PriorityQueue<Delivery> deliveryPQ = new PriorityQueue<>();
                     
-                    points.add(position);
+                    List<Delivery> deliveryList = mAdapter.getDeliveryList();
+                    
+                    for (Delivery deliveryCopy : deliveryList) {
+                        // for every delivery
+                        
+                        double delta = Math.abs(deliveryCopy.getLatLng().latitude - endLat)
+                                + Math.abs(deliveryCopy.getLatLng().longitude - endLng);
+                        
+                        deliveryCopy.setDelta(delta);
+                        deliveryPQ.add(deliveryCopy);
+                    }
+                    // closest delivery to the current iteration of Legs.
+                    Delivery closestDelivery = deliveryPQ.peek();
+                    closestDelivery.setDistance(distance);
+                    closestDelivery.setTime(duration);
+                    closestDelivery.setPrevLatLng(new LatLng(startLat, startLng));
+                    
+                    Log.i(TAG, "onPostExecute: Closest Delivery was had delta:" + closestDelivery.getDelta());
+                    if (!newDeliveryList.contains(closestDelivery)){
+                        newDeliveryList.add(closestDelivery);
+                    }
                 }
-                
-                lineOptions.addAll(points);
-                lineOptions.width(15);
-                lineOptions.color(Color.BLUE);
-                lineOptions.geodesic(true);
-                
             }
-            Log.i(TAG, "onPostExecute: " + currentPolyline.toString());
-            // Drawing polyline in the Google Map for the i-th route
-            currentPolyline = mMap.addPolyline(lineOptions);
+            mAdapter.updateList(newDeliveryList);
         }
     }
     
@@ -513,7 +615,7 @@ public class MapsActivity extends AppCompatActivity implements
         // Output format
         String output = "json";
         
-        // Building the url to the web service
+        // Building the url to the web service; used for drawing paths
         String url = "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters;
         
         Log.d(TAG, "getDirectionsUrlWithWaypoints() returned: " + url);

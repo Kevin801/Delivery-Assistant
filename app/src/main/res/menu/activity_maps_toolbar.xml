@@ -9,6 +9,5 @@
         android:id="@+id/action_display_traffic"
         android:checkable="true"
         android:title="@string/show_or_Hide_traffic"
-        app:actionViewClass="android.widget.Checkbox"
         app:showAsAction="never" />
 </menu>

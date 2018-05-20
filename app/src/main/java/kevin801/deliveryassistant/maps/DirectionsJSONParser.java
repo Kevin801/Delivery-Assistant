@@ -1,5 +1,7 @@
 package kevin801.deliveryassistant.maps;
 
+import android.util.Log;
+
 import com.google.android.gms.maps.model.LatLng;
 
 import org.json.JSONArray;
@@ -9,12 +11,19 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.PriorityQueue;
+
+import kevin801.deliveryassistant.maps.list.DeliveriesListAdapter;
+import kevin801.deliveryassistant.maps.list.Delivery;
 
 /**
  * Created by anupamchugh on 27/11/15.
  */
 
 public class DirectionsJSONParser {
+    
+    private static final String TAG = DirectionsJSONParser.class.getSimpleName();
+    private List<Delivery> deliveryList;
     
     /**
      * Receives a JSONObject and returns a list of lists containing latitude and longitude
@@ -34,9 +43,46 @@ public class DirectionsJSONParser {
                 jLegs = ((JSONObject) jRoutes.get(i)).getJSONArray("legs");
                 List path = new ArrayList<HashMap<String, String>>();
                 
+                List travelDataList = new ArrayList<HashMap<String, String>>();
+                
                 /** Traversing all legs */
                 for (int j = 0; j < jLegs.length(); j++) {
                     jSteps = ((JSONObject) jLegs.get(j)).getJSONArray("steps");
+                    
+                    // gathering data
+                    String jDist = jLegs.getJSONObject(j).getJSONObject("distance").getString("value");
+                    String jDur = jLegs.getJSONObject(j).getJSONObject("duration").getString("value");
+    
+                    String startAddress = jLegs.getJSONObject(j).getString("start_address");
+                    String endAddress = jLegs.getJSONObject(j).getString("end_address");
+    
+                    // Needed to record it's "PreLatLng" in delivery
+                    String startLat = jLegs.getJSONObject(j).getJSONObject("start_location").getString("lat");
+                    String startLng = jLegs.getJSONObject(j).getJSONObject("start_location").getString("lng");
+                    
+                    // only need to compare the Destination/end Lat Lng.
+                    String endLat = jLegs.getJSONObject(j).getJSONObject("end_location").getString("lat");
+                    String endLng = jLegs.getJSONObject(j).getJSONObject("end_location").getString("lng");
+                    // end gathering data
+                    
+                    // Initializing
+                    HashMap<String, String> travelDataHM = new HashMap<String, String>();
+                    
+                    // adding items to tables
+                    travelDataHM.put("distance", jDist);
+                    travelDataHM.put("duration", jDur);
+                    
+                    travelDataHM.put("startAddress", startAddress);
+                    travelDataHM.put("endAddress", endAddress);
+    
+                    travelDataHM.put("startLat", startLat);
+                    travelDataHM.put("startLng", startLng);
+    
+                    travelDataHM.put("endLat", endLat);
+                    travelDataHM.put("endLng", endLng);
+    
+    
+                    travelDataList.add(travelDataHM);
                     
                     /** Traversing all steps */
                     for (int k = 0; k < jSteps.length(); k++) {
@@ -47,20 +93,21 @@ public class DirectionsJSONParser {
                         /** Traversing all points */
                         for (int l = 0; l < list.size(); l++) {
                             HashMap<String, String> hm = new HashMap<String, String>();
+                            
                             hm.put("lat", Double.toString(((LatLng) list.get(l)).latitude));
                             hm.put("lng", Double.toString(((LatLng) list.get(l)).longitude));
                             path.add(hm);
                         }
                     }
-                    routes.add(path);
-                }
+                } // end of iterating Legs.
+                
+                routes.add(path);           // 0 - path
+                routes.add(travelDataList); // 1 - travelDataList
             }
             
         } catch (JSONException e) {
             e.printStackTrace();
-        } catch (Exception e) {
         }
-        
         return routes;
     }
     
