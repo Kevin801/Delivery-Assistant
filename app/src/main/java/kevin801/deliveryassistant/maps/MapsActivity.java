@@ -77,6 +77,7 @@ public class MapsActivity extends AppCompatActivity implements
         GoogleMap.OnMarkerClickListener {
     
     private static final String TAG = MapsActivity.class.getSimpleName();
+    private Context mContext;
     private GoogleMap mMap;
     private FusedLocationProviderClient mFusedLocationProviderClient;
     private DeliveriesListAdapter mAdapter;
@@ -84,20 +85,11 @@ public class MapsActivity extends AppCompatActivity implements
     
     private ArrayList<Marker> markerList;
     private Marker selectedMarker;
-    /**
-     * The marker where the user's work is located
-     */
     private Marker workMarker;
-    private LatLng workLatLng = null;
-    
     private Polyline currentPolyline;
-    private LatLng currLatLng;
     
-    private Context mContext;
+    private LatLng workLatLng = null;
     private Button navigateButton;
-    private String googleNavURI;
-    String result;
-//    private Delivery closestDelivery;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -276,7 +268,7 @@ public class MapsActivity extends AppCompatActivity implements
                     if (task.isSuccessful()) {
                         // Set the map's camera position to the current location of the device.
                         Location location = task.getResult();
-                        currLatLng = new LatLng(location.getLatitude(),
+                        LatLng currLatLng = new LatLng(location.getLatitude(),
                                 location.getLongitude());
                         
                         CameraUpdate update = CameraUpdateFactory.newLatLngZoom(currLatLng, 15.0F);
@@ -284,7 +276,6 @@ public class MapsActivity extends AppCompatActivity implements
                         
                         if (workLatLng == null) { // default to user location.
                             workLatLng = currLatLng;
-                            mAdapter.setWorkLatLng(workLatLng);
                         }
                         workMarker = mMap.addMarker(new MarkerOptions()
                                 .title("Work").position(workLatLng)
@@ -399,6 +390,7 @@ public class MapsActivity extends AppCompatActivity implements
     
     public void navigateButton(View view) {
         try {
+            String googleNavURI = generateNavURI();
             Uri gmmIntentUri = Uri.parse(googleNavURI);
             Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
             mapIntent.setPackage("com.google.android.apps.maps");
@@ -406,6 +398,11 @@ public class MapsActivity extends AppCompatActivity implements
         } catch (Exception e) {
             Log.e("Exception: %s", e.getMessage());
         }
+    }
+    
+    private String generateNavURI() {
+        
+        return "";
     }
     
     /*
@@ -451,11 +448,6 @@ public class MapsActivity extends AppCompatActivity implements
                 jObject = new JSONObject(jsonData[0]);
                 DirectionsJSONParser parser = new DirectionsJSONParser();
                 routes = parser.parse(jObject);
-
-//                mAdapter.setClosestDelivery(parser.getDelivery(jObject));
-//                mAdapter.addWithUpdatedData(parser.getDelivery(jObject));
-            
-            
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -515,7 +507,7 @@ public class MapsActivity extends AppCompatActivity implements
                             HashMap<String, String> travelData = travelDataListOfHM.get(j);
                             // unpacking data from hashtable to new arrayList of each data type
                             distanceList.add(travelData.get("distance"));
-                            durationList.add(travelData.get("distance"));
+                            durationList.add(travelData.get("duration"));
     
                             startAddressList.add(travelData.get("startAddress"));
                             endAddressList.add(travelData.get("endAddress"));
@@ -571,9 +563,9 @@ public class MapsActivity extends AppCompatActivity implements
                     closestDelivery.setTime(duration);
                     closestDelivery.setPrevLatLng(new LatLng(startLat, startLng));
                     
-                    Log.i(TAG, "onPostExecute: Closest Delivery was had delta:" + closestDelivery.getDelta());
                     if (!newDeliveryList.contains(closestDelivery)){
                         newDeliveryList.add(closestDelivery);
+                        Log.i(TAG, "onPostExecute: " + closestDelivery.toString());
                     }
                 }
             }

@@ -124,4 +124,18 @@ public class Delivery implements Comparable<Delivery>{
         
         return Objects.hash(address, prevAddress, distance, time, tip, delta, prevLatLng, latLng, place);
     }
+    
+    @Override
+    public String toString() {
+        return "Delivery{" +
+                "address='" + address + '\'' +
+                ", prevAddress='" + prevAddress + '\'' +
+                ", distance=" + distance +
+                ", time=" + time +
+                ", tip=" + tip +
+                ", delta=" + delta +
+                ", prevLatLng=" + prevLatLng +
+                ", latLng=" + latLng +
+                '}';
+    }
 }

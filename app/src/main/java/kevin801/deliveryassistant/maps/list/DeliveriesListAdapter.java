@@ -23,7 +23,6 @@ public class DeliveriesListAdapter extends RecyclerView.Adapter<ViewHolder> {
     private List<Delivery> deliveryList;
     private OnItemClicked mListener;
     private Context mContext;
-    private LatLng workLatLng;
     
     /**
      * Constructs the Context and Data set.
@@ -33,10 +32,6 @@ public class DeliveriesListAdapter extends RecyclerView.Adapter<ViewHolder> {
     public DeliveriesListAdapter(Context context, List<Delivery> dataSet) {
         this.mContext = context;
         deliveryList = dataSet;
-    }
-    
-    public void setWorkLatLng(LatLng workLatLng) {
-        this.workLatLng = workLatLng;
     }
     
     public void updateList(ArrayList<Delivery> newDeliveryList) {
