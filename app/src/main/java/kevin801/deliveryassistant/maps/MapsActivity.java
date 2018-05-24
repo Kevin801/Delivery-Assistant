@@ -367,7 +367,11 @@ public class MapsActivity extends AppCompatActivity implements
             });
             builder.show();
         } else {
-            Toast.makeText(this, R.string.no_marker_selected, Toast.LENGTH_LONG).show();
+            if (selectedMarker == workMarker) {
+                Toast.makeText(this, R.string.work_marker_selected, Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, R.string.no_marker_selected, Toast.LENGTH_LONG).show();
+            }
         }
     }
     
