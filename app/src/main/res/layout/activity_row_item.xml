@@ -36,7 +36,7 @@
             android:id="@+id/time_row_item"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Time:  5         "
+            android:text="Time:  0         "
             android:maxLines="2"
             android:maxWidth="75dp"
             android:textColor="@android:color/black" />
@@ -45,7 +45,7 @@
             android:id="@+id/distance_row_item"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Dist:  5       "
+            android:text="Dist:    0    "
             android:maxLines="2"
             android:maxWidth="75dp"
             android:textColor="@android:color/black" />

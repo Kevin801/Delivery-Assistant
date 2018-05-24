@@ -10,6 +10,8 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -63,6 +65,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.PriorityQueue;
 
@@ -158,10 +161,10 @@ public class MapsActivity extends AppCompatActivity implements
                     markerList.add(marker);
                     marker.showInfoWindow();
                     selectedMarker = marker;
-                    
+                   
                     mAdapter.addDeliveryToList(delivery);
-                    
-                    drawPolylines(); // will update closest delivery
+    
+                    drawPolylines();
                     navigateButton.setClickable(true);
                 }
                 gotoLatLngLocation(place.getLatLng());
@@ -176,33 +179,12 @@ public class MapsActivity extends AppCompatActivity implements
         });
     }
     
-    /**
-     * used to draw lines every time a marker is added or deleted.
-     * Use sparingly; limited amount of uses per day.
-     */
-    private void drawPolylines() {
-        currentPolyline.remove();
-        // Checks, whether start and end locations are captured
-        if (markerList.size() >= 1) {
-            // making waypoints as deliveries
-            List<LatLng> waypointList = new ArrayList<>();
-            for (int i = 0; i < markerList.size(); i++) {
-                waypointList.add(markerList.get(i).getPosition());
-            }
-            // Getting URL to the Google Directions API
-            String url = getDirectionsUrlWithWaypoints(workMarker.getPosition(), waypointList);
-            DownloadTask downloadTask = new DownloadTask();
-            // Start downloading json data from Google Directions API
-            downloadTask.execute(url);
-        }
-    }
-    
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
         
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            // permission is granted
+            // permission granted
             googleMap.setOnMarkerClickListener(this);
             mMap.setMyLocationEnabled(true);
             mMap.getUiSettings().setZoomControlsEnabled(true);
@@ -271,7 +253,14 @@ public class MapsActivity extends AppCompatActivity implements
                         if (workLatLng == null) { // default to user location.
                             workLatLng = currLatLng;
                         }
-                        mAdapter.addDeliveryToList(new Delivery("Work", workLatLng));
+                        
+                        Delivery workDelivery = new Delivery("Work", workLatLng);
+                        
+                        ArrayList<Delivery> initialList = new ArrayList<Delivery>();
+                        initialList.add(workDelivery);
+                        
+                        mAdapter.updateList(initialList);
+                        
                         workMarker = mMap.addMarker(new MarkerOptions()
                                 .title("Work").position(workLatLng)
                                 .icon(bitmapDescriptorFromVector(mContext, R.drawable.ic_work_black_24dp)));
@@ -333,7 +322,7 @@ public class MapsActivity extends AppCompatActivity implements
             mMap.animateCamera(CameraUpdateFactory.newLatLng(marker.getPosition()));
             return true;
         }
-        Log.i(TAG, "onMarkerClick: " + marker.toString());
+        Log.i(TAG, "onMarkerClick: selected marker not equal to work marker: " + marker.toString());
         return false;
     }
     
@@ -405,6 +394,27 @@ public class MapsActivity extends AppCompatActivity implements
      * https://www.journaldev.com/13373/android-google-map-drawing-route-two-points
      *
      */
+    
+    /**
+     * used to draw lines every time a marker is added or deleted.
+     * Use sparingly; limited amount of uses per day.
+     */
+    private void drawPolylines() {
+        currentPolyline.remove();
+        // Check whether start and end locations are captured
+        if (markerList.size() >= 1) {
+            // making waypoints as deliveries
+            List<LatLng> waypointList = new ArrayList<>();
+            for (int i = 0; i < markerList.size(); i++) {
+                waypointList.add(markerList.get(i).getPosition());
+            }
+            // Getting URL to the Google Directions API
+            String url = getDirectionsUrlWithWaypoints(workMarker.getPosition(), waypointList);
+            DownloadTask downloadTask = new DownloadTask();
+            // Start downloading json data from Google Directions API
+            downloadTask.execute(url);
+        }
+    }
     
     private class DownloadTask extends AsyncTask {
         
@@ -561,11 +571,6 @@ public class MapsActivity extends AppCompatActivity implements
                     closestDelivery.setPrevLatLng(new LatLng(startLat, startLng));
                     
                     newDeliveryList.add(closestDelivery);
-    
-//                    if (!newDeliveryList.contains(closestDelivery)){
-//                        newDeliveryList.add(closestDelivery);
-//                        Log.i(TAG, "onPostExecute: " + closestDelivery.toString());
-//                    }
                 }
             }
             mAdapter.updateList(newDeliveryList);

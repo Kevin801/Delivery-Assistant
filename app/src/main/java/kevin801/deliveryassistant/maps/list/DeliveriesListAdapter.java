@@ -1,6 +1,5 @@
 package kevin801.deliveryassistant.maps.list;
 
-
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -42,7 +41,8 @@ public class DeliveriesListAdapter extends RecyclerView.Adapter<ViewHolder> {
         
         notifyDataSetChanged();
         
-        Log.i(TAG, "updateList: ");
+        Log.i(TAG, "updateList: size: " + deliveryList.size());
+        
     }
     
     /**
@@ -121,15 +121,31 @@ public class DeliveriesListAdapter extends RecyclerView.Adapter<ViewHolder> {
         List<String> endAddressSplit = Arrays.asList(delivery.getAddress().split(","));
         
         try {
-            String strStart = "From: \t\t" + prevAddressSplit.get(0) + "," + prevAddressSplit.get(1);
-            String strEnd = "To: \t\t\t\t\t" + endAddressSplit.get(0) + "," + endAddressSplit.get(1);
+            String strStart, strEnd, strDur, strDist;
+            
+            if (deliveryList.size() == 1) {
+                // state of the list view when only one item.
+                strStart = "";
+                strEnd = "";
+                strDur = "";
+                strDist = "";
+
+            } else {
+                // after adding more items to list
+                strStart = "From: \t\t" + prevAddressSplit.get(0) + "," + prevAddressSplit.get(1);
+                strEnd = "To: \t\t\t\t\t" + endAddressSplit.get(0) + "," + endAddressSplit.get(1);
+    
+                strDur = secondsToMinutes(delivery.getDuration());
+                strDist = metersToMiles(delivery.getDistance());
+            }
             
             // Set item views based on your views and data model
             holder.tvStartAddress.setText(strStart);
             holder.tvEndAddress.setText(strEnd);
-            
-            holder.tvTime.setText(secondsToMinutes(delivery.getDuration()));
-            holder.tvDistance.setText(metersToMiles(delivery.getDistance()));
+    
+            holder.tvTime.setText(strDur);
+            holder.tvDistance.setText(strDist);
+
         } catch (Exception e) {
             Log.e(TAG, "onBindViewHolder: ExceptionHit", e);
             // usually throws when first starting up
@@ -148,7 +164,6 @@ public class DeliveriesListAdapter extends RecyclerView.Adapter<ViewHolder> {
         return Math.round(num) + " min";
     }
     
-    // Return the size of your dataset (invoked by the layout manager)
     @Override
     public int getItemCount() {
         return deliveryList.size();
