@@ -1,11 +1,13 @@
 package kevin801.deliveryassistant.maps.list;
 
+import android.app.Activity;
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import com.google.android.gms.maps.model.Marker;
 
@@ -23,6 +25,7 @@ public class DeliveriesListAdapter extends RecyclerView.Adapter<ViewHolder> {
     private List<Delivery> deliveryList;
     private OnItemClicked mListener;
     private Context mContext;
+    private Activity mActivity;
     private Delivery workDelivery;
     
     /**
@@ -31,19 +34,19 @@ public class DeliveriesListAdapter extends RecyclerView.Adapter<ViewHolder> {
      * @param context The context where it's being used.
      * @param dataSet The data being used.
      */
-    public DeliveriesListAdapter(Context context, List<Delivery> dataSet) {
+    public DeliveriesListAdapter(Context context, Activity mActivity, List<Delivery> dataSet) {
         this.mContext = context;
+        this.mActivity = mActivity;
         deliveryList = dataSet;
     }
     
-    public void updateList(ArrayList<Delivery> newDeliveryList) {
+    public void updateList(List<Delivery> newDeliveryList) {
         deliveryList.clear();
         deliveryList.addAll(newDeliveryList);
         
         notifyDataSetChanged();
         
         Log.i(TAG, "updateList: size: " + deliveryList.size());
-        
     }
     
     /**
@@ -53,7 +56,6 @@ public class DeliveriesListAdapter extends RecyclerView.Adapter<ViewHolder> {
      */
     public void addDeliveryToList(Delivery delivery) {
         deliveryList.add(delivery);
-        
     }
     
     /**
@@ -137,7 +139,6 @@ public class DeliveriesListAdapter extends RecyclerView.Adapter<ViewHolder> {
             
         } catch (ArrayIndexOutOfBoundsException outOfB) {
             Log.e(TAG, "onBindViewHolder: Exception: ", outOfB);
-            // usually throws when first starting up
         }
         
         // Set item views based on your views and data
@@ -146,6 +147,20 @@ public class DeliveriesListAdapter extends RecyclerView.Adapter<ViewHolder> {
         
         holder.tvTime.setText(strDur);
         holder.tvDistance.setText(strDist);
+    
+    
+        double totalDur = 0;
+        double totalDist = 0;
+        for(Delivery ele : deliveryList) {
+            totalDur = totalDur + ele.getDuration();
+            totalDist = totalDist + ele.getDistance();
+        }
+    
+        TextView tvTotDist = mActivity.findViewById(R.id.total_distance);
+        tvTotDist.setText("Distance: " + metersToMiles(totalDist));
+    
+        TextView tvTotDur = mActivity.findViewById(R.id.total_duration);
+        tvTotDur.setText("Time: " + secondsToMinutes(totalDur));
     }
     
     private String metersToMiles(double distance) {

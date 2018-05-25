@@ -28,6 +28,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.api.Status;
@@ -54,6 +55,7 @@ import com.google.android.gms.tasks.Task;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.w3c.dom.Text;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -61,6 +63,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -74,9 +77,7 @@ import kevin801.deliveryassistant.maps.list.DeliveriesListAdapter;
 import kevin801.deliveryassistant.maps.list.Delivery;
 import kevin801.deliveryassistant.maps.list.OnItemClicked;
 
-public class MapsActivity extends AppCompatActivity implements
-        OnMapReadyCallback,
-        OnItemClicked,
+public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, OnItemClicked,
         GoogleMap.OnMarkerClickListener {
     
     private static final String TAG = MapsActivity.class.getSimpleName();
@@ -84,13 +85,12 @@ public class MapsActivity extends AppCompatActivity implements
     private GoogleMap mMap;
     private FusedLocationProviderClient mFusedLocationProviderClient;
     private DeliveriesListAdapter mAdapter;
-    private RecyclerView.LayoutManager mLayoutManager;
     
     private ArrayList<Marker> markerList;
     private Marker selectedMarker;
     private Marker workMarker;
-    private Polyline currentPolyline;
     
+    private Polyline currentPolyline;
     private LatLng workLatLng = null;
     private Button navigateButton;
     
@@ -108,26 +108,35 @@ public class MapsActivity extends AppCompatActivity implements
         
         markerList = new ArrayList<>();
         mContext = this;
-        
-        setUpListView(new ArrayList<Delivery>());
-        setUpGoogleMapsSearch();
+    
+        listView();
+        searchBar();
         navigateButton = findViewById(R.id.navigate_button);
         navigateButton.setClickable(false);
     }
     
-    private void setUpListView(List<Delivery> dataSet) {
-        RecyclerView mRecyclerListView = (RecyclerView) findViewById(R.id.deliveries_listview);
+    /**
+     * Sets up the List View
+     * @param dataSet
+     */
+    private void listView() {
+        List<Delivery> dataSet = new ArrayList<>();
         
-        mLayoutManager = new LinearLayoutManager(this);
+        RecyclerView mRecyclerListView = (RecyclerView) findViewById(R.id.deliveries_listview);
+    
+        RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(this);
         mRecyclerListView.setLayoutManager(mLayoutManager);
         
-        mAdapter = new DeliveriesListAdapter(mContext, dataSet);
+        mAdapter = new DeliveriesListAdapter(mContext, this , dataSet);
         mRecyclerListView.setAdapter(mAdapter);
         
         mAdapter.setOnClick(this);
     }
     
-    private void setUpGoogleMapsSearch() {
+    /**
+     * Sets up the Google Maps seach bar.
+     */
+    private void searchBar() {
         PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment)
                 getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
         
@@ -141,11 +150,10 @@ public class MapsActivity extends AppCompatActivity implements
                         .title(Objects.requireNonNull(place.getAddress()).toString());
                 
                 Delivery delivery = new Delivery(place.getAddress().toString(), latLngLoc);
-                
-                ArrayList<Delivery> dupList = (ArrayList<Delivery>) mAdapter.getDeliveryList();
+                ArrayList<Delivery> dupDeliveryList = (ArrayList<Delivery>) mAdapter.getDeliveryList();
                 
                 boolean noDuplicates = true;
-                for (Delivery ele : dupList) {
+                for (Delivery ele : dupDeliveryList) {
                     if (ele.getLatLng().equals(delivery.getLatLng())) {
                         // delivery is already in the list.
                         noDuplicates = false;
@@ -190,8 +198,7 @@ public class MapsActivity extends AppCompatActivity implements
             mMap.getUiSettings().setMapToolbarEnabled(false);
             
             gotoDeviceLocation();
-            setUpOnMyLocationButtonClickedListener();
-    
+            onMyLocationButtonClickedListener();
             LatLng nonExistant = new LatLng(9999999, 9999999);
             
             // initializing selectedMarker with a non existant location
@@ -205,7 +212,8 @@ public class MapsActivity extends AppCompatActivity implements
             polyline.remove();
         }
     }
-    private void setUpOnMyLocationButtonClickedListener() {
+    
+    private void onMyLocationButtonClickedListener() {
         mMap.setOnMyLocationButtonClickListener(new GoogleMap.OnMyLocationButtonClickListener() {
             @Override
             public boolean onMyLocationButtonClick() {
@@ -260,7 +268,7 @@ public class MapsActivity extends AppCompatActivity implements
                         mMap.animateCamera(update);
                         
                         if (workLatLng == null) {
-                            setUpWorkInfo(currLatLng);
+                            setWorkInfo(currLatLng);
                         }
                     }
                 }
@@ -270,7 +278,7 @@ public class MapsActivity extends AppCompatActivity implements
         }
     }
     
-    private void setUpWorkInfo(LatLng currLatLng) {
+    private void setWorkInfo(LatLng currLatLng) {
         workLatLng = currLatLng;
         
         // adding work to list
@@ -442,18 +450,10 @@ public class MapsActivity extends AppCompatActivity implements
     }
     
     private class DownloadTask extends AsyncTask {
-        
-        @Override
-        protected void onPostExecute(Object result) {
-            super.onPostExecute(result);
-            
-            ParserTask parserTask = new ParserTask();
-            parserTask.execute(result.toString());
-        }
-        
+    
         @Override
         protected Object doInBackground(Object[] url) {
-            
+        
             String data = "";
             try {
                 data = downloadUrl(url[0].toString());
@@ -461,6 +461,14 @@ public class MapsActivity extends AppCompatActivity implements
                 Log.d("Background Task", e.toString());
             }
             return data;
+        }
+        
+        @Override
+        protected void onPostExecute(Object result) {
+            super.onPostExecute(result);
+            
+            ParserTask parserTask = new ParserTask();
+            parserTask.execute(result.toString());
         }
     }
     
