@@ -23,6 +23,7 @@ public class DeliveriesListAdapter extends RecyclerView.Adapter<ViewHolder> {
     private List<Delivery> deliveryList;
     private OnItemClicked mListener;
     private Context mContext;
+    private Delivery workDelivery;
     
     /**
      * Constructs the Context and Data set.
@@ -75,11 +76,10 @@ public class DeliveriesListAdapter extends RecyclerView.Adapter<ViewHolder> {
             throw new NoSuchElementException();
         }
         
-        // remove reference by copying to new array
         ArrayList<Delivery> copy = new ArrayList<>();
-        for (Delivery s : deliveryList) {
-            copy.add(s);
-        }
+        // remove reference by copying to new array
+        copy.addAll(deliveryList);
+        
         
         // refreshing delivery list
         deliveryList.clear();
@@ -120,36 +120,32 @@ public class DeliveriesListAdapter extends RecyclerView.Adapter<ViewHolder> {
         List<String> prevAddressSplit = Arrays.asList(delivery.getPrevAddress().split(","));
         List<String> endAddressSplit = Arrays.asList(delivery.getAddress().split(","));
         
+        String strStart, strEnd, strDur, strDist;
+        strStart = strEnd = strDur = strDist = "";
+        
         try {
-            String strStart, strEnd, strDur, strDist;
-            
-            if (deliveryList.size() == 1) {
-                // state of the list view when only one item.
-                strStart = "";
-                strEnd = "";
-                strDur = "";
-                strDist = "";
-
-            } else {
+            if (prevAddressSplit.size() >= 2 && endAddressSplit.size() >= 2) {
                 // after adding more items to list
                 strStart = "From: \t\t" + prevAddressSplit.get(0) + "," + prevAddressSplit.get(1);
                 strEnd = "To: \t\t\t\t\t" + endAddressSplit.get(0) + "," + endAddressSplit.get(1);
-    
+                
                 strDur = secondsToMinutes(delivery.getDuration());
                 strDist = metersToMiles(delivery.getDistance());
+            } else {
+                strStart = "Work: \t\t" + prevAddressSplit.get(0);
             }
             
-            // Set item views based on your views and data model
-            holder.tvStartAddress.setText(strStart);
-            holder.tvEndAddress.setText(strEnd);
-    
-            holder.tvTime.setText(strDur);
-            holder.tvDistance.setText(strDist);
-
-        } catch (Exception e) {
-            Log.e(TAG, "onBindViewHolder: ExceptionHit", e);
+        } catch (ArrayIndexOutOfBoundsException outOfB) {
+            Log.e(TAG, "onBindViewHolder: Exception: ", outOfB);
             // usually throws when first starting up
         }
+        
+        // Set item views based on your views and data
+        holder.tvStartAddress.setText(strStart);
+        holder.tvEndAddress.setText(strEnd);
+        
+        holder.tvTime.setText(strDur);
+        holder.tvDistance.setText(strDist);
     }
     
     private String metersToMiles(double distance) {

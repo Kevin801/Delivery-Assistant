@@ -111,7 +111,6 @@ public class MapsActivity extends AppCompatActivity implements
         
         setUpListView(new ArrayList<Delivery>());
         setUpGoogleMapsSearch();
-        
         navigateButton = findViewById(R.id.navigate_button);
         navigateButton.setClickable(false);
     }
@@ -141,7 +140,7 @@ public class MapsActivity extends AppCompatActivity implements
                         .position(latLngLoc)
                         .title(Objects.requireNonNull(place.getAddress()).toString());
                 
-                Delivery delivery = new Delivery(place.getAddress().toString(),latLngLoc);
+                Delivery delivery = new Delivery(place.getAddress().toString(), latLngLoc);
                 
                 ArrayList<Delivery> dupList = (ArrayList<Delivery>) mAdapter.getDeliveryList();
                 
@@ -161,9 +160,9 @@ public class MapsActivity extends AppCompatActivity implements
                     markerList.add(marker);
                     marker.showInfoWindow();
                     selectedMarker = marker;
-                   
+                    
                     mAdapter.addDeliveryToList(delivery);
-    
+                    
                     drawPolylines();
                     navigateButton.setClickable(true);
                 }
@@ -191,7 +190,8 @@ public class MapsActivity extends AppCompatActivity implements
             mMap.getUiSettings().setMapToolbarEnabled(false);
             
             gotoDeviceLocation();
-            
+            setUpOnMyLocationButtonClickedListener();
+    
             LatLng nonExistant = new LatLng(9999999, 9999999);
             
             // initializing selectedMarker with a non existant location
@@ -204,6 +204,15 @@ public class MapsActivity extends AppCompatActivity implements
             currentPolyline = polyline;
             polyline.remove();
         }
+    }
+    private void setUpOnMyLocationButtonClickedListener() {
+        mMap.setOnMyLocationButtonClickListener(new GoogleMap.OnMyLocationButtonClickListener() {
+            @Override
+            public boolean onMyLocationButtonClick() {
+                gotoDeviceLocation();
+                return true;
+            }
+        });
     }
     
     @Override
@@ -235,7 +244,7 @@ public class MapsActivity extends AppCompatActivity implements
     /**
      * Moves the camera to the device's location.
      */
-    public void gotoDeviceLocation() {
+    private void gotoDeviceLocation() {
         try {
             Task<Location> locationResult = mFusedLocationProviderClient.getLastLocation();
             locationResult.addOnCompleteListener(new OnCompleteListener<Location>() {
@@ -248,25 +257,11 @@ public class MapsActivity extends AppCompatActivity implements
                                 location.getLongitude());
                         
                         CameraUpdate update = CameraUpdateFactory.newLatLngZoom(currLatLng, 15.0F);
-                        mMap.moveCamera(update);
+                        mMap.animateCamera(update);
                         
-                        if (workLatLng == null) { // default to user location.
-                            workLatLng = currLatLng;
+                        if (workLatLng == null) {
+                            setUpWorkInfo(currLatLng);
                         }
-                        
-                        Delivery workDelivery = new Delivery("Work", workLatLng);
-                        
-                        ArrayList<Delivery> initialList = new ArrayList<Delivery>();
-                        initialList.add(workDelivery);
-                        
-                        mAdapter.updateList(initialList);
-                        
-                        workMarker = mMap.addMarker(new MarkerOptions()
-                                .title("Work").position(workLatLng)
-                                .icon(bitmapDescriptorFromVector(mContext, R.drawable.ic_work_black_24dp)));
-                        
-                        markerList.add(workMarker);
-                        
                     }
                 }
             });
@@ -274,6 +269,35 @@ public class MapsActivity extends AppCompatActivity implements
             Log.e("Exception: %s", e.getMessage());
         }
     }
+    
+    private void setUpWorkInfo(LatLng currLatLng) {
+        workLatLng = currLatLng;
+        
+        // adding work to list
+        String workAddress = "";
+        try {
+            Geocoder geocoder = new Geocoder(mContext, Locale.getDefault());
+            List<Address> addresses = geocoder.getFromLocation(workLatLng.latitude, workLatLng.longitude, 1);
+            workAddress = addresses.get(0).getAddressLine(0);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        
+        Delivery workDelivery = new Delivery("Work", workLatLng);
+        workDelivery.setPrevAddress(workAddress);
+    
+        ArrayList<Delivery> initialList = new ArrayList<Delivery>();
+        initialList.add(workDelivery);
+        mAdapter.updateList(initialList);
+        
+        // setting up work marker
+        workMarker = mMap.addMarker(new MarkerOptions()
+                .title("Work").position(workLatLng)
+                .icon(bitmapDescriptorFromVector(mContext, R.drawable.ic_work_black_24dp)));
+    
+        markerList.add(workMarker);
+    }
+    
     
     private BitmapDescriptor bitmapDescriptorFromVector(Context context, @DrawableRes int vectorDrawableResourceId) {
         Drawable background = ContextCompat.getDrawable(context, vectorDrawableResourceId);
@@ -300,14 +324,14 @@ public class MapsActivity extends AppCompatActivity implements
     public void onItemClick(View view, int position) {
         List<Delivery> list = mAdapter.getDeliveryList();
         
-        Delivery delivery = (Delivery) list.get(position);
-        gotoLatLngLocation(delivery.getLatLng());
+        Delivery deliveryClicked = (Delivery) list.get(position);
+        gotoLatLngLocation(deliveryClicked.getLatLng());
         
-        for (Marker ele : markerList) {
-            if (ele.getPosition().equals(delivery.getLatLng())) {
+        for (Marker markerEle : markerList) {
+            if (markerEle.getPosition().equals(deliveryClicked.getLatLng())) {
                 // delivery found
-                ele.showInfoWindow();
-                selectedMarker = ele;
+                markerEle.showInfoWindow();
+                selectedMarker = markerEle;
                 
                 break;
             }
@@ -316,14 +340,10 @@ public class MapsActivity extends AppCompatActivity implements
     
     @Override
     public boolean onMarkerClick(Marker marker) {
-        if (!marker.equals(workMarker)) {
-            this.selectedMarker = marker;
-            selectedMarker.showInfoWindow();
-            mMap.animateCamera(CameraUpdateFactory.newLatLng(marker.getPosition()));
-            return true;
-        }
-        Log.i(TAG, "onMarkerClick: selected marker not equal to work marker: " + marker.toString());
-        return false;
+        this.selectedMarker = marker;
+        selectedMarker.showInfoWindow();
+        mMap.animateCamera(CameraUpdateFactory.newLatLng(marker.getPosition()));
+        return true;
     }
     
     /**
@@ -332,7 +352,8 @@ public class MapsActivity extends AppCompatActivity implements
      * @param view The View.
      */
     public void deleteMarkerButton(View view) {
-        if (selectedMarker != workMarker && selectedMarker.isInfoWindowShown()) {
+        if (!selectedMarker.equals(workMarker) && selectedMarker.isInfoWindowShown()) {
+            // show dialog before deleting
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle(R.string.delete_warning_title);
             builder.setMessage(R.string.delete_warning_message);
@@ -367,7 +388,7 @@ public class MapsActivity extends AppCompatActivity implements
             });
             builder.show();
         } else {
-            if (selectedMarker == workMarker) {
+            if (selectedMarker.equals(workMarker)) {
                 Toast.makeText(this, R.string.work_marker_selected, Toast.LENGTH_LONG).show();
             } else {
                 Toast.makeText(this, R.string.no_marker_selected, Toast.LENGTH_LONG).show();
@@ -517,14 +538,14 @@ public class MapsActivity extends AppCompatActivity implements
                             // unpacking data from hashtable to new arrayList of each data type
                             distanceList.add(travelData.get("distance"));
                             durationList.add(travelData.get("duration"));
-    
+                            
                             startAddressList.add(travelData.get("startAddress"));
                             endAddressList.add(travelData.get("endAddress"));
                             
                             double lat = Double.parseDouble(travelData.get("startLat"));
                             double lng = Double.parseDouble(travelData.get("startLng"));
                             startLatLngList.add(new LatLng(lat, lng));
-    
+                            
                             lat = Double.parseDouble(travelData.get("endLat"));
                             lng = Double.parseDouble(travelData.get("endLng"));
                             endLatLngList.add(new LatLng(lat, lng));
@@ -540,8 +561,8 @@ public class MapsActivity extends AppCompatActivity implements
                 // unpacking data
                 String endAddress = endAddressList.get(idxOfLeg);
                 String startAddress = startAddressList.get(idxOfLeg);
-    
-                double distance =  Double.parseDouble(distanceList.get(idxOfLeg));
+                
+                double distance = Double.parseDouble(distanceList.get(idxOfLeg));
                 double duration = Double.parseDouble(durationList.get(idxOfLeg));
                 
                 double startLat = startLatLngList.get(idxOfLeg).latitude;
@@ -549,7 +570,7 @@ public class MapsActivity extends AppCompatActivity implements
                 
                 double endLat = endLatLngList.get(idxOfLeg).latitude;
                 double endLng = endLatLngList.get(idxOfLeg).longitude;
-    
+                
                 if ((startLat != endLat) && (startLng != endLng)) {
                     // startLatLng and endLatLng are not the same.
                     PriorityQueue<Delivery> deliveryPQ = new PriorityQueue<>();
